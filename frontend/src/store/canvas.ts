@@ -58,6 +58,7 @@ interface CanvasState {
   duplicateFrame: (index: number) => void;
   setCurrentFrame: (i: number) => void;
   setFrameDuration: (index: number, duration: number) => void;
+  moveFrame: (fromIndex: number, toIndex: number) => void;
   resizeCanvas: (w: number, h: number) => void;
   addLayer: () => void;
   setCurrentLayer: (id: string) => void;
@@ -328,6 +329,24 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         i === index ? { ...f, duration } : f
       );
       set({ frames: newFrames });
+    },
+    moveFrame: (fromIndex, toIndex) => {
+      const { frames, currentFrame } = get();
+      if (fromIndex < 0 || fromIndex >= frames.length) return;
+      if (toIndex < 0 || toIndex >= frames.length) return;
+      if (fromIndex === toIndex) return;
+      const newFrames = [...frames];
+      const [moved] = newFrames.splice(fromIndex, 1);
+      newFrames.splice(toIndex, 0, moved);
+      let newCurrentFrame = currentFrame;
+      if (currentFrame === fromIndex) {
+        newCurrentFrame = toIndex;
+      } else if (fromIndex < currentFrame && toIndex >= currentFrame) {
+        newCurrentFrame = currentFrame - 1;
+      } else if (fromIndex > currentFrame && toIndex <= currentFrame) {
+        newCurrentFrame = currentFrame + 1;
+      }
+      set({ frames: newFrames, currentFrame: newCurrentFrame });
     },
     resizeCanvas: (w, h) => {
       const newLayers = get().layers.map(layer => ({

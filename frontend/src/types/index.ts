@@ -1,4 +1,4 @@
-export type Tool = 'pen' | 'eraser' | 'fill' | 'picker' | 'line' | 'rect';
+export type Tool = 'pen' | 'eraser' | 'fill' | 'picker' | 'line' | 'rect' | 'select';
 
 export interface AnimationFrame {
   id: string;

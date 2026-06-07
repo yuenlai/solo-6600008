@@ -6,6 +6,7 @@ const TOOLS: { key: Tool; label: string }[] = [
   { key: 'pen', label: '✏️' }, { key: 'eraser', label: '🧹' },
   { key: 'fill', label: '🪣' }, { key: 'picker', label: '💉' },
   { key: 'line', label: '📏' }, { key: 'rect', label: '⬜' },
+  { key: 'select', label: '🔲' },
 ];
 
 const PALETTE = ['#000000','#ffffff','#e53935','#43a047','#1e88e5','#fdd835','#8e24aa','#ff6f00','#00acc1','#795548'];

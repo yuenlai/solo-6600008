@@ -33,3 +33,19 @@ export interface Draft {
   currentFrame: number;
   thumbnail: string;
 }
+
+export interface PixelTemplate {
+  id: string;
+  name: string;
+  category: string;
+  width: number;
+  height: number;
+  thumbnail: string;
+  pixels: string[][];
+}
+
+export interface TemplateCategory {
+  id: string;
+  name: string;
+  icon: string;
+}

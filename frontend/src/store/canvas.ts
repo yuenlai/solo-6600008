@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { Tool, AnimationFrame, PixelCanvas, Layer, Draft, MirrorMode, BackgroundMode } from '../types';
+import { Tool, AnimationFrame, PixelCanvas, Layer, Draft, MirrorMode, BackgroundMode, PixelTemplate } from '../types';
+import { getTemplatesWithThumbnails } from '../data/templates';
 
 interface Selection {
   x: number;
@@ -41,7 +42,12 @@ interface CanvasState {
   offsetX: number;
   offsetY: number;
   backgroundMode: BackgroundMode;
+  templatePanelOpen: boolean;
+  templates: PixelTemplate[];
   setTool: (t: Tool) => void;
+  toggleTemplatePanel: () => void;
+  loadTemplate: (template: PixelTemplate) => void;
+  loadTemplates: () => void;
   setBackgroundMode: (mode: BackgroundMode) => void;
   setColor: (c: string) => void;
   setZoom: (z: number) => void;
@@ -169,7 +175,31 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     offsetX: 0,
     offsetY: 0,
     backgroundMode: 'checkerboard',
+    templatePanelOpen: false,
+    templates: [],
     setTool: (tool) => set({ tool, selection: null, selectionPixels: null }),
+    toggleTemplatePanel: () => set({ templatePanelOpen: !get().templatePanelOpen }),
+    loadTemplates: () => {
+      set({ templates: getTemplatesWithThumbnails() });
+    },
+    loadTemplate: (template) => {
+      const newLayer = createLayer(template.width, template.height, '图层 1');
+      newLayer.pixels = template.pixels.map(row => [...row]);
+      const newLayers = [newLayer];
+      const newFrame = createFrame(newLayers, 200);
+      set({
+        canvas: { width: template.width, height: template.height },
+        layers: newLayers,
+        frames: [newFrame],
+        currentFrame: 0,
+        currentLayerId: newLayer.id,
+        history: [],
+        historyIndex: -1,
+        templatePanelOpen: false,
+        selection: null,
+        selectionPixels: null,
+      });
+    },
     setBackgroundMode: (mode) => set({ backgroundMode: mode }),
     setOffset: (x, y) => set({ offsetX: x, offsetY: y }),
     resetOffset: () => set({ offsetX: 0, offsetY: 0 }),

@@ -1,16 +1,17 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useCanvasStore } from '../store/canvas';
 
 export const ComparePanel: React.FC = () => {
-  const {
-    comparePanelOpen,
-    compareDraft,
-    toggleComparePanel,
-    setCompareDraft,
-    getCompositePixels,
-    getCompositePixelsFromDraft,
-    getPixelDifferences,
-  } = useCanvasStore();
+  const comparePanelOpen = useCanvasStore((state) => state.comparePanelOpen);
+  const compareDraft = useCanvasStore((state) => state.compareDraft);
+  const toggleComparePanel = useCanvasStore((state) => state.toggleComparePanel);
+  const setCompareDraft = useCanvasStore((state) => state.setCompareDraft);
+  const layers = useCanvasStore((state) => state.layers);
+  const frames = useCanvasStore((state) => state.frames);
+  const currentFrame = useCanvasStore((state) => state.currentFrame);
+  const canvas = useCanvasStore((state) => state.canvas);
+  const getCompositePixelsFromDraft = useCanvasStore((state) => state.getCompositePixelsFromDraft);
+  const getPixelDifferences = useCanvasStore((state) => state.getPixelDifferences);
 
   const currentCanvasRef = useRef<HTMLCanvasElement>(null);
   const draftCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -18,11 +19,50 @@ export const ComparePanel: React.FC = () => {
   const [showDiff, setShowDiff] = useState(true);
   const [diffMode, setDiffMode] = useState<'side' | 'diff'>('side');
 
+  const currentPixels = useMemo(() => {
+    const composite: string[][] = [];
+    const height = canvas.height;
+    const width = canvas.width;
+    for (let y = 0; y < height; y++) {
+      const row: string[] = [];
+      for (let x = 0; x < width; x++) {
+        row.push('transparent');
+      }
+      composite.push(row);
+    }
+    const targetLayers = frames[currentFrame]?.layers || layers;
+    for (const layer of targetLayers) {
+      if (!layer.visible) continue;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          if (layer.pixels[y] && layer.pixels[y][x] !== 'transparent') {
+            composite[y][x] = layer.pixels[y][x];
+          }
+        }
+      }
+    }
+    return composite;
+  }, [layers, frames, currentFrame, canvas]);
+
+  const draftPixels = useMemo(() => {
+    if (!compareDraft) return [];
+    return getCompositePixelsFromDraft(compareDraft);
+  }, [compareDraft, getCompositePixelsFromDraft]);
+
+  const differences = useMemo(() => {
+    if (!currentPixels.length || !draftPixels.length) return [];
+    return getPixelDifferences(currentPixels, draftPixels);
+  }, [currentPixels, draftPixels, getPixelDifferences]);
+
+  const diffCount = useMemo(() => {
+    return differences.flat().filter(Boolean).length;
+  }, [differences]);
+
   const drawPixels = (
     canvas: HTMLCanvasElement | null,
     pixels: string[][],
     highlightDiff?: boolean,
-    differences?: boolean[][]
+    diffMap?: boolean[][]
   ) => {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -48,10 +88,10 @@ export const ComparePanel: React.FC = () => {
           ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
         }
 
-        if (highlightDiff && differences?.[y]?.[x]) {
+        if (highlightDiff && diffMap?.[y]?.[x]) {
           ctx.strokeStyle = '#ff4444';
           ctx.lineWidth = 1;
-          ctx.strokeRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+          ctx.strokeRect(x * pixelSize + 0.5, y * pixelSize + 0.5, pixelSize - 1, pixelSize - 1);
         }
       }
     }
@@ -59,16 +99,16 @@ export const ComparePanel: React.FC = () => {
 
   const drawDiffOnly = (
     canvas: HTMLCanvasElement | null,
-    currentPixels: string[][],
-    draftPixels: string[][],
-    differences: boolean[][]
+    currPixels: string[][],
+    drPixels: string[][],
+    diffMap: boolean[][]
   ) => {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const height = differences.length;
-    const width = differences[0]?.length || 0;
+    const height = diffMap.length;
+    const width = diffMap[0]?.length || 0;
     const pixelSize = Math.max(4, Math.min(16, Math.floor(400 / Math.max(width, height))));
 
     canvas.width = width * pixelSize;
@@ -78,10 +118,10 @@ export const ComparePanel: React.FC = () => {
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const isDiff = differences[y]?.[x];
+        const isDiff = diffMap[y]?.[x];
         if (isDiff) {
-          const currentColor = currentPixels[y]?.[x] || 'transparent';
-          const draftColor = draftPixels[y]?.[x] || 'transparent';
+          const currentColor = currPixels[y]?.[x] || 'transparent';
+          const draftColor = drPixels[y]?.[x] || 'transparent';
 
           if (currentColor !== 'transparent' && draftColor === 'transparent') {
             ctx.fillStyle = 'rgba(76, 175, 80, 0.7)';
@@ -101,18 +141,13 @@ export const ComparePanel: React.FC = () => {
 
   useEffect(() => {
     if (!comparePanelOpen || !compareDraft) return;
-
-    const currentPixels = getCompositePixels();
-    const draftPixels = getCompositePixelsFromDraft(compareDraft);
-    const differences = getPixelDifferences(currentPixels, draftPixels);
-
     if (diffMode === 'side') {
       drawPixels(currentCanvasRef.current, currentPixels, showDiff, differences);
       drawPixels(draftCanvasRef.current, draftPixels, showDiff, differences);
     } else {
       drawDiffOnly(diffCanvasRef.current, currentPixels, draftPixels, differences);
     }
-  }, [comparePanelOpen, compareDraft, showDiff, diffMode, getCompositePixels, getCompositePixelsFromDraft, getPixelDifferences]);
+  }, [comparePanelOpen, compareDraft, showDiff, diffMode, currentPixels, draftPixels, differences]);
 
   const handleClose = () => {
     toggleComparePanel();
@@ -120,11 +155,6 @@ export const ComparePanel: React.FC = () => {
   };
 
   if (!comparePanelOpen || !compareDraft) return null;
-
-  const currentPixels = getCompositePixels();
-  const draftPixels = getCompositePixelsFromDraft(compareDraft);
-  const differences = getPixelDifferences(currentPixels, draftPixels);
-  const diffCount = differences.flat().filter(Boolean).length;
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString();

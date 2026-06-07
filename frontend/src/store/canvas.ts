@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Tool, AnimationFrame, PixelCanvas, Layer } from '../types';
+import { Tool, AnimationFrame, PixelCanvas, Layer, Draft } from '../types';
 
 interface CanvasState {
   canvas: PixelCanvas;
@@ -14,6 +14,8 @@ interface CanvasState {
   historyIndex: number;
   isPlaying: boolean;
   playbackSpeed: number;
+  drafts: Draft[];
+  draftPanelOpen: boolean;
   setTool: (t: Tool) => void;
   setColor: (c: string) => void;
   setZoom: (z: number) => void;
@@ -37,6 +39,12 @@ interface CanvasState {
   nextFrame: () => void;
   prevFrame: () => void;
   exportPNG: (scale?: number) => void;
+  generateThumbnail: () => string;
+  saveDraft: (name: string) => void;
+  loadDraft: (id: string) => void;
+  deleteDraft: (id: string) => void;
+  loadDrafts: () => void;
+  toggleDraftPanel: () => void;
 }
 
 const emptyPixels = (w: number, h: number) => Array.from({ length: h }, () => Array(w).fill('transparent'));
@@ -60,10 +68,29 @@ const createFrame = (layers: Layer[], duration: number = 200): AnimationFrame =>
   duration,
 });
 
+const DRAFTS_STORAGE_KEY = 'pixel-editor-drafts';
+
 export const useCanvasStore = create<CanvasState>((set, get) => {
   const initialLayer = createLayer(32, 32, '图层 1');
   const initialLayers = [initialLayer];
   const initialFrame = createFrame(initialLayers, 200);
+
+  const loadDraftsFromStorage = (): Draft[] => {
+    try {
+      const stored = localStorage.getItem(DRAFTS_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const saveDraftsToStorage = (drafts: Draft[]) => {
+    try {
+      localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
+    } catch (e) {
+      console.error('Failed to save drafts:', e);
+    }
+  };
 
   return {
     canvas: { width: 32, height: 32 },
@@ -75,6 +102,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     history: [], historyIndex: -1,
     isPlaying: false,
     playbackSpeed: 1,
+    drafts: [],
+    draftPanelOpen: false,
     setTool: (tool) => set({ tool }),
     setColor: (color) => set({ color }),
     setZoom: (zoom) => set({ zoom }),
@@ -280,6 +309,76 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       link.download = `pixel-art-${width}x${height}-${Date.now()}.png`;
       link.href = exportCanvas.toDataURL('image/png');
       link.click();
+    },
+    generateThumbnail: () => {
+      const compositePixels = get().getCompositePixels();
+      const height = compositePixels.length;
+      const width = compositePixels[0]?.length || 0;
+      const thumbSize = 64;
+      const scale = Math.min(thumbSize / width, thumbSize / height);
+      const thumbCanvas = document.createElement('canvas');
+      thumbCanvas.width = thumbSize;
+      thumbCanvas.height = thumbSize;
+      const ctx = thumbCanvas.getContext('2d');
+      if (!ctx) return '';
+      ctx.imageSmoothingEnabled = false;
+      const offsetX = (thumbSize - width * scale) / 2;
+      const offsetY = (thumbSize - height * scale) / 2;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const color = compositePixels[y][x];
+          if (color !== 'transparent') {
+            ctx.fillStyle = color;
+            ctx.fillRect(offsetX + x * scale, offsetY + y * scale, scale, scale);
+          }
+        }
+      }
+      return thumbCanvas.toDataURL('image/png');
+    },
+    saveDraft: (name) => {
+      const { canvas, frames, currentFrame, drafts } = get();
+      const thumbnail = get().generateThumbnail();
+      const now = Date.now();
+      const newDraft: Draft = {
+        id: now.toString() + Math.random().toString(36).substr(2, 9),
+        name: name || `草稿 ${new Date(now).toLocaleString()}`,
+        createdAt: now,
+        updatedAt: now,
+        canvas: { ...canvas },
+        frames: JSON.parse(JSON.stringify(frames)),
+        currentFrame,
+        thumbnail,
+      };
+      const newDrafts = [newDraft, ...drafts];
+      saveDraftsToStorage(newDrafts);
+      set({ drafts: newDrafts });
+    },
+    loadDraft: (id) => {
+      const { drafts } = get();
+      const draft = drafts.find(d => d.id === id);
+      if (!draft) return;
+      const targetLayers = deepCloneLayers(draft.frames[draft.currentFrame].layers);
+      set({
+        canvas: { ...draft.canvas },
+        frames: JSON.parse(JSON.stringify(draft.frames)),
+        currentFrame: draft.currentFrame,
+        layers: targetLayers,
+        currentLayerId: targetLayers[0].id,
+        history: [],
+        historyIndex: -1,
+      });
+    },
+    deleteDraft: (id) => {
+      const { drafts } = get();
+      const newDrafts = drafts.filter(d => d.id !== id);
+      saveDraftsToStorage(newDrafts);
+      set({ drafts: newDrafts });
+    },
+    loadDrafts: () => {
+      set({ drafts: loadDraftsFromStorage() });
+    },
+    toggleDraftPanel: () => {
+      set({ draftPanelOpen: !get().draftPanelOpen });
     },
   };
 });

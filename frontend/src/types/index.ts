@@ -20,3 +20,14 @@ export interface Layer {
   visible: boolean;
   pixels: string[][];
 }
+
+export interface Draft {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  canvas: PixelCanvas;
+  frames: AnimationFrame[];
+  currentFrame: number;
+  thumbnail: string;
+}

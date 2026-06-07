@@ -11,6 +11,7 @@ export const PalettePanel: React.FC = () => {
     toggleFavoriteColor,
     activePaletteName,
     setActivePaletteName,
+    toggleColorReplaceModal,
   } = useCanvasStore();
 
   const applyPalette = (paletteName: string) => {
@@ -32,8 +33,26 @@ export const PalettePanel: React.FC = () => {
         padding: '12px',
         fontWeight: 'bold',
         borderBottom: '1px solid #37474f',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
       }}>
-        调色板
+        <span>调色板</span>
+        <button
+          onClick={toggleColorReplaceModal}
+          title="颜色批量替换"
+          style={{
+            background: '#ff6f00',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            padding: '4px 8px',
+            cursor: 'pointer',
+            fontSize: '12px',
+          }}
+        >
+          🔄 替换
+        </button>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>

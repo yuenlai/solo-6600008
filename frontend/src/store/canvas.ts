@@ -45,6 +45,7 @@ interface CanvasState {
   backgroundMode: BackgroundMode;
   templatePanelOpen: boolean;
   templates: PixelTemplate[];
+  colorReplaceModalOpen: boolean;
   setTool: (t: Tool) => void;
   toggleTemplatePanel: () => void;
   loadTemplate: (template: PixelTemplate) => void;
@@ -104,6 +105,9 @@ interface CanvasState {
   drawRect: (x: number, y: number, width: number, height: number, fill?: boolean) => void;
   drawLine: (x1: number, y1: number, x2: number, y2: number) => void;
   addOutline: (strokeColor: string, thickness?: number) => void;
+  toggleColorReplaceModal: () => void;
+  getAllUsedColors: () => string[];
+  replaceColor: (oldColor: string, newColor: string) => void;
 }
 
 const emptyPixels = (w: number, h: number) => Array.from({ length: h }, () => Array(w).fill('transparent'));
@@ -182,6 +186,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     backgroundMode: 'checkerboard',
     templatePanelOpen: false,
     templates: [],
+    colorReplaceModalOpen: false,
     setTool: (tool) => set({ tool, selection: null, selectionPixels: null }),
     toggleTemplatePanel: () => set({ templatePanelOpen: !get().templatePanelOpen }),
     loadTemplates: () => {
@@ -890,6 +895,45 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
       );
       set({ layers: newLayers, frames: newFrames, history: [...get().history.slice(0, get().historyIndex + 1), get().getCompositePixels()], historyIndex: get().historyIndex + 1 });
+    },
+    toggleColorReplaceModal: () => set({ colorReplaceModalOpen: !get().colorReplaceModalOpen }),
+    getAllUsedColors: () => {
+      const { frames } = get();
+      const colorSet = new Set<string>();
+      for (const frame of frames) {
+        for (const layer of frame.layers) {
+          if (!layer.visible) continue;
+          for (const row of layer.pixels) {
+            for (const pixel of row) {
+              if (pixel !== 'transparent') {
+                colorSet.add(pixel);
+              }
+            }
+          }
+        }
+      }
+      return Array.from(colorSet);
+    },
+    replaceColor: (oldColor, newColor) => {
+      const { frames, layers, currentFrame } = get();
+      const replaceInLayers = (layersToReplace: Layer[]): Layer[] =>
+        layersToReplace.map(layer => ({
+          ...layer,
+          pixels: layer.pixels.map(row =>
+            row.map(pixel => (pixel === oldColor ? newColor : pixel))
+          ),
+        }));
+      const newFrames = frames.map((frame, i) => ({
+        ...frame,
+        layers: replaceInLayers(frame.layers),
+      }));
+      const newLayers = replaceInLayers(layers);
+      set({
+        frames: newFrames,
+        layers: newLayers,
+        history: [...get().history.slice(0, get().historyIndex + 1), get().getCompositePixels()],
+        historyIndex: get().historyIndex + 1,
+      });
     },
   };
 });

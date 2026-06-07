@@ -9,6 +9,7 @@ import { DraftPanel } from './components/DraftPanel';
 import { NewCanvasModal } from './components/NewCanvasModal';
 import { ResizeCanvasModal } from './components/ResizeCanvasModal';
 import { TemplatePanel } from './components/TemplatePanel';
+import { ColorReplaceModal } from './components/ColorReplaceModal';
 
 const App: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'sans-serif' }}>
@@ -26,6 +27,7 @@ const App: React.FC = () => (
     <NewCanvasModal />
     <ResizeCanvasModal />
     <TemplatePanel />
+    <ColorReplaceModal />
   </div>
 );
 export default App;

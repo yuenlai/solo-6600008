@@ -32,6 +32,7 @@ interface CanvasState {
   drafts: Draft[];
   draftPanelOpen: boolean;
   newCanvasModalOpen: boolean;
+  resizeCanvasModalOpen: boolean;
   selection: Selection | null;
   selectionPixels: string[][] | null;
   mirrorMode: MirrorMode;
@@ -84,7 +85,9 @@ interface CanvasState {
   loadDrafts: () => void;
   toggleDraftPanel: () => void;
   toggleNewCanvasModal: () => void;
+  toggleResizeCanvasModal: () => void;
   createNewCanvas: (width: number, height: number) => void;
+  scaleCanvas: (scale: number) => void;
   setSelection: (selection: Selection | null) => void;
   captureSelectionPixels: () => void;
   clearSelectionArea: () => void;
@@ -160,6 +163,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     drafts: [],
     draftPanelOpen: false,
     newCanvasModalOpen: false,
+    resizeCanvasModalOpen: false,
     selection: null,
     selectionPixels: null,
     mirrorMode: 'none',
@@ -550,6 +554,52 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     },
     toggleNewCanvasModal: () => {
       set({ newCanvasModalOpen: !get().newCanvasModalOpen });
+    },
+    toggleResizeCanvasModal: () => {
+      set({ resizeCanvasModalOpen: !get().resizeCanvasModalOpen });
+    },
+    scaleCanvas: (scale) => {
+      const { canvas, frames } = get();
+      const newWidth = Math.max(1, Math.round(canvas.width * scale));
+      const newHeight = Math.max(1, Math.round(canvas.height * scale));
+
+      const scalePixelsNN = (pixels: string[][]): string[][] => {
+        const h = pixels.length;
+        const w = pixels[0]?.length || 0;
+        const newPixels: string[][] = [];
+        for (let y = 0; y < newHeight; y++) {
+          const row: string[] = [];
+          for (let x = 0; x < newWidth; x++) {
+            const srcX = Math.min(Math.floor(x / scale), w - 1);
+            const srcY = Math.min(Math.floor(y / scale), h - 1);
+            row.push(pixels[srcY][srcX]);
+          }
+          newPixels.push(row);
+        }
+        return newPixels;
+      };
+
+      const newFrames = frames.map(frame => ({
+        ...frame,
+        layers: frame.layers.map(layer => ({
+          ...layer,
+          pixels: scalePixelsNN(layer.pixels),
+        })),
+      }));
+
+      const targetLayers = newFrames[0] ? deepCloneLayers(newFrames[0].layers) : [];
+
+      set({
+        canvas: { width: newWidth, height: newHeight },
+        frames: newFrames,
+        layers: targetLayers,
+        currentLayerId: targetLayers[0]?.id || '',
+        history: [],
+        historyIndex: -1,
+        selection: null,
+        selectionPixels: null,
+        resizeCanvasModalOpen: false,
+      });
     },
     createNewCanvas: (width, height) => {
       const newLayer = createLayer(width, height, '图层 1');

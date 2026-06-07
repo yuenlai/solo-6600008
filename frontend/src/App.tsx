@@ -7,6 +7,7 @@ import { PalettePanel } from './components/PalettePanel';
 import { AnimationPanel } from './components/AnimationPanel';
 import { DraftPanel } from './components/DraftPanel';
 import { NewCanvasModal } from './components/NewCanvasModal';
+import { ResizeCanvasModal } from './components/ResizeCanvasModal';
 import { TemplatePanel } from './components/TemplatePanel';
 
 const App: React.FC = () => (
@@ -23,6 +24,7 @@ const App: React.FC = () => (
     <AnimationPanel />
     <DraftPanel />
     <NewCanvasModal />
+    <ResizeCanvasModal />
     <TemplatePanel />
   </div>
 );

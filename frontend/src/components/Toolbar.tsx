@@ -29,10 +29,11 @@ const BACKGROUND_MODES: { key: BackgroundMode; label: string; title: string; col
 ];
 
 export const Toolbar: React.FC = () => {
-  const { tool, setTool, color, setColor, zoom, setZoom, clearCanvas, undo, exportPNG, toggleDraftPanel, toggleNewCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode } = useCanvasStore();
+  const { tool, setTool, color, setColor, zoom, setZoom, clearCanvas, undo, exportPNG, toggleDraftPanel, toggleNewCanvasModal, toggleResizeCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode } = useCanvasStore();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '12px', background: '#263238', color: '#fff', width: '60px', alignItems: 'center' }}>
       <button onClick={toggleNewCanvasModal} title="新建画布" style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#7b1fa2', color: '#fff', cursor: 'pointer', fontSize: '18px' }}>➕</button>
+      <button onClick={toggleResizeCanvasModal} title="缩放画布" style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#00897b', color: '#fff', cursor: 'pointer', fontSize: '18px' }}>🔍</button>
       <button onClick={toggleTemplatePanel} title="像素模板" style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#e65100', color: '#fff', cursor: 'pointer', fontSize: '18px' }}>📋</button>
       <div style={{ borderTop: '1px solid #546e7a', width: '100%' }} />
       {TOOLS.map(t => (

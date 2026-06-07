@@ -352,13 +352,19 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
           }
         } else if (tool === 'fill') {
           const target = pixels[y][x];
-          const stack = [[x, y]];
-          while (stack.length) {
-            const [cx, cy] = stack.pop()!;
-            if (cx < 0 || cx >= canvas.width || cy < 0 || cy >= canvas.height) continue;
-            if (pixels[cy][cx] !== target) continue;
-            pixels[cy][cx] = color;
-            stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+          if (target !== color) {
+            const visited = new Set<string>();
+            const stack = [[x, y]];
+            while (stack.length) {
+              const [cx, cy] = stack.pop()!;
+              if (cx < 0 || cx >= canvas.width || cy < 0 || cy >= canvas.height) continue;
+              const key = `${cx},${cy}`;
+              if (visited.has(key)) continue;
+              if (pixels[cy][cx] !== target) continue;
+              visited.add(key);
+              pixels[cy][cx] = color;
+              stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+            }
           }
         }
         return { ...layer, pixels };

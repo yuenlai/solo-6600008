@@ -27,9 +27,13 @@ interface CanvasState {
   selection: Selection | null;
   selectionPixels: string[][] | null;
   mirrorMode: MirrorMode;
+  favoriteColors: string[];
+  activePaletteName: string | null;
   setTool: (t: Tool) => void;
   setColor: (c: string) => void;
   setZoom: (z: number) => void;
+  toggleFavoriteColor: (c: string) => void;
+  setActivePaletteName: (name: string | null) => void;
   setPixel: (x: number, y: number) => void;
   clearCanvas: () => void;
   undo: () => void;
@@ -129,9 +133,20 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     selection: null,
     selectionPixels: null,
     mirrorMode: 'none',
+    favoriteColors: [],
+    activePaletteName: null,
     setTool: (tool) => set({ tool, selection: null, selectionPixels: null }),
     setColor: (color) => set({ color }),
     setZoom: (zoom) => set({ zoom }),
+    toggleFavoriteColor: (color) => {
+      const { favoriteColors } = get();
+      if (favoriteColors.includes(color)) {
+        set({ favoriteColors: favoriteColors.filter(c => c !== color) });
+      } else {
+        set({ favoriteColors: [...favoriteColors, color] });
+      }
+    },
+    setActivePaletteName: (name) => set({ activePaletteName: name }),
     setPixel: (x, y) => {
       const { canvas, color, tool, layers, currentLayerId, currentFrame, frames, mirrorMode } = get();
       if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) return;

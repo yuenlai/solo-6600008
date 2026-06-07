@@ -48,7 +48,7 @@ interface HoverState {
 }
 
 export const Toolbar: React.FC = () => {
-  const { tool, setTool, color, setColor, zoom, setZoom, clearCanvas, undo, exportPNG, exportMultiSizePNG, toggleDraftPanel, toggleNewCanvasModal, toggleResizeCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode } = useCanvasStore();
+  const { tool, setTool, color, setColor, zoom, setZoom, clearCanvas, undo, redo, canUndo, canRedo, exportPNG, exportMultiSizePNG, toggleDraftPanel, toggleNewCanvasModal, toggleResizeCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode } = useCanvasStore();
   const [hover, setHover] = useState<HoverState | null>(null);
 
   const currentTool = TOOLS.find(t => t.key === tool);
@@ -68,6 +68,7 @@ export const Toolbar: React.FC = () => {
       resize: { name: '缩放画布', description: '调整画布尺寸', shortcut: '' },
       template: { name: '像素模板', description: '从模板库选择', shortcut: '' },
       undo: { name: '撤销', description: '撤销上一步操作', shortcut: 'Ctrl+Z' },
+      redo: { name: '重做', description: '重做已撤销的操作', shortcut: 'Ctrl+Y' },
       clear: { name: '清空画布', description: '清除当前图层内容', shortcut: '' },
       export1: { name: '导出 PNG (1x)', description: '导出原始尺寸图片', shortcut: '' },
       export2: { name: '导出 PNG (2x)', description: '导出2倍放大图片', shortcut: '' },
@@ -175,12 +176,22 @@ export const Toolbar: React.FC = () => {
         <span style={{ fontSize: '11px', color: '#90a4ae', fontWeight: 500 }}>{zoom}px</span>
         <button onClick={() => setZoom(Math.max(zoom - 4, 4))} style={{ width: '40px', height: '30px', borderRadius: '6px', border: 'none', background: '#37474f', color: '#fff', cursor: 'pointer', fontSize: '14px', transition: 'all 0.2s' }}>-</button>
       </div>
-      <button
-        onClick={undo}
-        onMouseEnter={(e) => setHover({ type: 'action', key: 'undo', x: e.clientX, y: e.clientY })}
-        onMouseLeave={() => setHover(null)}
-        style={{ width: '44px', height: '44px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #546e7a 0%, #455a64 100%)', cursor: 'pointer', fontSize: '16px', transition: 'all 0.2s', color: '#fff' }}
-      >↩️</button>
+      <div style={{ display: 'flex', gap: '4px' }}>
+        <button
+          onClick={undo}
+          disabled={!canUndo()}
+          onMouseEnter={(e) => setHover({ type: 'action', key: 'undo', x: e.clientX, y: e.clientY })}
+          onMouseLeave={() => setHover(null)}
+          style={{ width: '44px', height: '44px', borderRadius: '10px', border: 'none', background: canUndo() ? 'linear-gradient(135deg, #546e7a 0%, #455a64 100%)' : '#37474f', cursor: canUndo() ? 'pointer' : 'not-allowed', fontSize: '16px', transition: 'all 0.2s', color: canUndo() ? '#fff' : '#666', opacity: canUndo() ? 1 : 0.5 }}
+        >↩️</button>
+        <button
+          onClick={redo}
+          disabled={!canRedo()}
+          onMouseEnter={(e) => setHover({ type: 'action', key: 'redo', x: e.clientX, y: e.clientY })}
+          onMouseLeave={() => setHover(null)}
+          style={{ width: '44px', height: '44px', borderRadius: '10px', border: 'none', background: canRedo() ? 'linear-gradient(135deg, #546e7a 0%, #455a64 100%)' : '#37474f', cursor: canRedo() ? 'pointer' : 'not-allowed', fontSize: '16px', transition: 'all 0.2s', color: canRedo() ? '#fff' : '#666', opacity: canRedo() ? 1 : 0.5 }}
+        >↪️</button>
+      </div>
       <button
         onClick={clearCanvas}
         onMouseEnter={(e) => setHover({ type: 'action', key: 'clear', x: e.clientX, y: e.clientY })}

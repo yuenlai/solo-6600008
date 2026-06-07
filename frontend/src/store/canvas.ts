@@ -16,6 +16,13 @@ interface OnionSkinSettings {
   opacity: number;
 }
 
+interface HistoryState {
+  layers: Layer[];
+  frames: AnimationFrame[];
+  currentFrame: number;
+  currentLayerId: string;
+}
+
 interface CanvasState {
   canvas: PixelCanvas;
   tool: Tool;
@@ -25,7 +32,7 @@ interface CanvasState {
   currentFrame: number;
   layers: Layer[];
   currentLayerId: string;
-  history: string[][][];
+  history: HistoryState[];
   historyIndex: number;
   isPlaying: boolean;
   playbackSpeed: number;
@@ -63,6 +70,9 @@ interface CanvasState {
   setPixel: (x: number, y: number) => void;
   clearCanvas: () => void;
   undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
   addFrame: (copyCurrent?: boolean) => void;
   deleteFrame: (index: number) => void;
   duplicateFrame: (index: number) => void;
@@ -115,6 +125,7 @@ interface CanvasState {
   setCompareDraft: (draft: Draft | null) => void;
   getCompositePixelsFromDraft: (draft: Draft) => string[][];
   getPixelDifferences: (pixels1: string[][], pixels2: string[][]) => boolean[][];
+  pushHistory: () => void;
 }
 
 const emptyPixels = (w: number, h: number) => Array.from({ length: h }, () => Array(w).fill('transparent'));
@@ -162,6 +173,32 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     }
   };
 
+  const initialHistoryState: HistoryState = {
+    layers: deepCloneLayers(initialLayers),
+    frames: JSON.parse(JSON.stringify([initialFrame])),
+    currentFrame: 0,
+    currentLayerId: initialLayer.id,
+  };
+
+  const pushHistory = () => {
+    const { layers, frames, currentFrame, currentLayerId, history, historyIndex } = get();
+    const historyState: HistoryState = {
+      layers: deepCloneLayers(layers),
+      frames: JSON.parse(JSON.stringify(frames)),
+      currentFrame,
+      currentLayerId,
+    };
+    const newHistory = [...history.slice(0, historyIndex + 1), historyState];
+    const MAX_HISTORY = 100;
+    if (newHistory.length > MAX_HISTORY) {
+      newHistory.shift();
+    }
+    set({
+      history: newHistory,
+      historyIndex: Math.min(historyIndex + 1, MAX_HISTORY - 1),
+    });
+  };
+
   return {
     canvas: { width: 32, height: 32 },
     tool: 'pen', color: '#000000', zoom: 16,
@@ -169,7 +206,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     currentFrame: 0,
     layers: initialLayers,
     currentLayerId: initialLayer.id,
-    history: [], historyIndex: -1,
+    history: [initialHistoryState], historyIndex: 0,
+    pushHistory,
     isPlaying: false,
     playbackSpeed: 1,
     drafts: [],
@@ -206,14 +244,20 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       newLayer.pixels = template.pixels.map(row => [...row]);
       const newLayers = [newLayer];
       const newFrame = createFrame(newLayers, 200);
+      const newHistoryState: HistoryState = {
+        layers: deepCloneLayers(newLayers),
+        frames: JSON.parse(JSON.stringify([newFrame])),
+        currentFrame: 0,
+        currentLayerId: newLayer.id,
+      };
       set({
         canvas: { width: template.width, height: template.height },
         layers: newLayers,
         frames: [newFrame],
         currentFrame: 0,
         currentLayerId: newLayer.id,
-        history: [],
-        historyIndex: -1,
+        history: [newHistoryState],
+        historyIndex: 0,
         templatePanelOpen: false,
         selection: null,
         selectionPixels: null,
@@ -300,7 +344,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       const newFrames = frames.map((f, i) =>
         i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
       );
-      set({ layers: newLayers, frames: newFrames, history: [...get().history.slice(0, get().historyIndex + 1), get().getCompositePixels()], historyIndex: get().historyIndex + 1 });
+      set({ layers: newLayers, frames: newFrames });
+      pushHistory();
     },
     clearCanvas: () => {
       const { layers, currentLayerId, currentFrame, frames } = get();
@@ -312,19 +357,39 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
       );
       set({ layers: newLayers, frames: newFrames, selection: null, selectionPixels: null });
+      pushHistory();
+    },
+    canUndo: () => {
+      const { historyIndex } = get();
+      return historyIndex > 0;
+    },
+    canRedo: () => {
+      const { history, historyIndex } = get();
+      return historyIndex < history.length - 1;
     },
     undo: () => {
-      const { history, historyIndex, canvas, currentFrame, frames } = get();
+      const { history, historyIndex } = get();
       if (historyIndex <= 0) return;
-      const prevPixels = history[historyIndex - 1];
-      const newLayers = frames[currentFrame].layers.map((layer, idx) => {
-        if (idx === 0) return { ...layer, pixels: prevPixels };
-        return { ...layer, pixels: emptyPixels(canvas.width, canvas.height) };
+      const prevState = history[historyIndex - 1];
+      set({
+        layers: deepCloneLayers(prevState.layers),
+        frames: JSON.parse(JSON.stringify(prevState.frames)),
+        currentFrame: prevState.currentFrame,
+        currentLayerId: prevState.currentLayerId,
+        historyIndex: historyIndex - 1,
       });
-      const newFrames = frames.map((f, i) =>
-        i === currentFrame ? { ...f, layers: newLayers } : f
-      );
-      set({ layers: newLayers, frames: newFrames, historyIndex: historyIndex - 1 });
+    },
+    redo: () => {
+      const { history, historyIndex } = get();
+      if (historyIndex >= history.length - 1) return;
+      const nextState = history[historyIndex + 1];
+      set({
+        layers: deepCloneLayers(nextState.layers),
+        frames: JSON.parse(JSON.stringify(nextState.frames)),
+        currentFrame: nextState.currentFrame,
+        currentLayerId: nextState.currentLayerId,
+        historyIndex: historyIndex + 1,
+      });
     },
     addFrame: (copyCurrent = false) => {
       const { frames, currentFrame, layers, canvas } = get();
@@ -403,7 +468,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         pixels: emptyPixels(w, h),
       }));
       const newFrames = [createFrame(newLayers, 200)];
-      set({ canvas: { width: w, height: h }, layers: newLayers, frames: newFrames, currentFrame: 0, currentLayerId: newLayers[0].id, history: [], historyIndex: -1, selection: null, selectionPixels: null });
+      const newHistoryState: HistoryState = {
+        layers: deepCloneLayers(newLayers),
+        frames: JSON.parse(JSON.stringify(newFrames)),
+        currentFrame: 0,
+        currentLayerId: newLayers[0].id,
+      };
+      set({ canvas: { width: w, height: h }, layers: newLayers, frames: newFrames, currentFrame: 0, currentLayerId: newLayers[0].id, history: [newHistoryState], historyIndex: 0, selection: null, selectionPixels: null });
     },
     addLayer: () => {
       const { canvas, layers, currentFrame, frames } = get();
@@ -413,6 +484,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
       );
       set({ layers: newLayers, frames: newFrames, currentLayerId: newLayer.id });
+      pushHistory();
     },
     setCurrentLayer: (id) => set({ currentLayerId: id }),
     toggleLayerVisibility: (id) => {
@@ -424,6 +496,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
       );
       set({ layers: newLayers, frames: newFrames });
+      pushHistory();
     },
     deleteLayer: (id) => {
       const { layers, currentLayerId, currentFrame, frames } = get();
@@ -434,6 +507,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
       );
       set({ layers: newLayers, currentLayerId: newCurrentLayerId, frames: newFrames });
+      pushHistory();
     },
     renameLayer: (id, name) => {
       const { layers, currentFrame, frames } = get();
@@ -444,6 +518,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
       );
       set({ layers: newLayers, frames: newFrames });
+      pushHistory();
     },
     getCompositePixels: (inputLayers) => {
       const { layers, canvas } = get();
@@ -573,14 +648,21 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       const draft = drafts.find(d => d.id === id);
       if (!draft) return;
       const targetLayers = deepCloneLayers(draft.frames[draft.currentFrame].layers);
+      const newFrames = JSON.parse(JSON.stringify(draft.frames));
+      const newHistoryState: HistoryState = {
+        layers: deepCloneLayers(targetLayers),
+        frames: JSON.parse(JSON.stringify(newFrames)),
+        currentFrame: draft.currentFrame,
+        currentLayerId: targetLayers[0].id,
+      };
       set({
         canvas: { ...draft.canvas },
-        frames: JSON.parse(JSON.stringify(draft.frames)),
+        frames: newFrames,
         currentFrame: draft.currentFrame,
         layers: targetLayers,
         currentLayerId: targetLayers[0].id,
-        history: [],
-        historyIndex: -1,
+        history: [newHistoryState],
+        historyIndex: 0,
       });
     },
     deleteDraft: (id) => {
@@ -602,7 +684,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       set({ resizeCanvasModalOpen: !get().resizeCanvasModalOpen });
     },
     scaleCanvas: (scale) => {
-      const { canvas, frames } = get();
+      const { canvas, frames, currentFrame } = get();
       const newWidth = Math.max(1, Math.round(canvas.width * scale));
       const newHeight = Math.max(1, Math.round(canvas.height * scale));
 
@@ -630,15 +712,21 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         })),
       }));
 
-      const targetLayers = newFrames[0] ? deepCloneLayers(newFrames[0].layers) : [];
+      const targetLayers = newFrames[currentFrame] ? deepCloneLayers(newFrames[currentFrame].layers) : [];
+      const newHistoryState: HistoryState = {
+        layers: deepCloneLayers(targetLayers),
+        frames: JSON.parse(JSON.stringify(newFrames)),
+        currentFrame,
+        currentLayerId: targetLayers[0]?.id || '',
+      };
 
       set({
         canvas: { width: newWidth, height: newHeight },
         frames: newFrames,
         layers: targetLayers,
         currentLayerId: targetLayers[0]?.id || '',
-        history: [],
-        historyIndex: -1,
+        history: [newHistoryState],
+        historyIndex: 0,
         selection: null,
         selectionPixels: null,
         resizeCanvasModalOpen: false,
@@ -648,14 +736,20 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       const newLayer = createLayer(width, height, '图层 1');
       const newLayers = [newLayer];
       const newFrame = createFrame(newLayers, 200);
+      const newHistoryState: HistoryState = {
+        layers: deepCloneLayers(newLayers),
+        frames: JSON.parse(JSON.stringify([newFrame])),
+        currentFrame: 0,
+        currentLayerId: newLayer.id,
+      };
       set({
         canvas: { width, height },
         layers: newLayers,
         frames: [newFrame],
         currentFrame: 0,
         currentLayerId: newLayer.id,
-        history: [],
-        historyIndex: -1,
+        history: [newHistoryState],
+        historyIndex: 0,
         newCanvasModalOpen: false,
         selection: null,
         selectionPixels: null,
@@ -705,6 +799,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
       );
       set({ layers: newLayers, frames: newFrames });
+      pushHistory();
     },
     setSelectionPosition: (x, y) => {
       const { selection } = get();
@@ -735,6 +830,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
       );
       set({ layers: newLayers, frames: newFrames });
+      pushHistory();
     },
     moveSelection: (dx, dy) => {
       const { selection, layers, currentLayerId, currentFrame, frames, selectionPixels, canvas } = get();
@@ -772,6 +868,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         frames: newFrames,
         selection: { ...selection, x: newX, y: newY },
       });
+      pushHistory();
     },
     applySelection: () => {
       set({ selection: null, selectionPixels: null });
@@ -848,7 +945,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       const newFrames = frames.map((f, i) =>
         i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
       );
-      set({ layers: newLayers, frames: newFrames, history: [...get().history.slice(0, get().historyIndex + 1), get().getCompositePixels()], historyIndex: get().historyIndex + 1 });
+      set({ layers: newLayers, frames: newFrames });
+      pushHistory();
     },
     drawLine: (x1, y1, x2, y2) => {
       const { canvas, color, layers, currentLayerId, currentFrame, frames } = get();
@@ -885,7 +983,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       const newFrames = frames.map((f, i) =>
         i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
       );
-      set({ layers: newLayers, frames: newFrames, history: [...get().history.slice(0, get().historyIndex + 1), get().getCompositePixels()], historyIndex: get().historyIndex + 1 });
+      set({ layers: newLayers, frames: newFrames });
+      pushHistory();
     },
     addOutline: (strokeColor, thickness = 1) => {
       const { canvas, layers, currentLayerId, currentFrame, frames } = get();
@@ -931,7 +1030,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       const newFrames = frames.map((f, i) =>
         i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
       );
-      set({ layers: newLayers, frames: newFrames, history: [...get().history.slice(0, get().historyIndex + 1), get().getCompositePixels()], historyIndex: get().historyIndex + 1 });
+      set({ layers: newLayers, frames: newFrames });
+      pushHistory();
     },
     toggleColorReplaceModal: () => set({ colorReplaceModalOpen: !get().colorReplaceModalOpen }),
     getAllUsedColors: () => {
@@ -968,9 +1068,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       set({
         frames: newFrames,
         layers: newLayers,
-        history: [...get().history.slice(0, get().historyIndex + 1), get().getCompositePixels()],
-        historyIndex: get().historyIndex + 1,
       });
+      pushHistory();
     },
     toggleComparePanel: () => set({ comparePanelOpen: !get().comparePanelOpen }),
     setCompareDraft: (draft) => set({ compareDraft: draft }),

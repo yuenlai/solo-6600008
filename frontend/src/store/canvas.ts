@@ -309,7 +309,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     },
     setActivePaletteName: (name) => set({ activePaletteName: name }),
     setPixel: (x, y) => {
-      const { canvas, color, tool, layers, currentLayerId, currentFrame, frames, mirrorMode } = get();
+      const { canvas, color, tool, layers, currentLayerId, currentFrame, frames, mirrorMode, getCompositePixels } = get();
       if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) return;
 
       const getMirroredPositions = (px: number, py: number): [number, number][] => {
@@ -351,7 +351,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
             }
           }
         } else if (tool === 'fill') {
-          const target = pixels[y][x];
+          const compositePixels = getCompositePixels();
+          const target = compositePixels[y][x];
           if (target !== color) {
             const visited = new Set<string>();
             const stack = [[x, y]];
@@ -360,7 +361,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
               if (cx < 0 || cx >= canvas.width || cy < 0 || cy >= canvas.height) continue;
               const key = `${cx},${cy}`;
               if (visited.has(key)) continue;
-              if (pixels[cy][cx] !== target) continue;
+              if (compositePixels[cy][cx] !== target) continue;
               visited.add(key);
               pixels[cy][cx] = color;
               stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);

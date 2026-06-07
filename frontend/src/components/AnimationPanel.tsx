@@ -62,6 +62,11 @@ export const AnimationPanel: React.FC = () => {
     setPlaybackSpeed,
     nextFrame,
     prevFrame,
+    onionSkin,
+    setOnionSkinEnabled,
+    setOnionSkinPrevFrames,
+    setOnionSkinNextFrames,
+    setOnionSkinOpacity,
   } = useCanvasStore();
 
   const playIntervalRef = useRef<number | null>(null);
@@ -190,6 +195,78 @@ export const AnimationPanel: React.FC = () => {
             <option value={4}>4x</option>
           </select>
         </div>
+      </div>
+
+      <div style={{
+        padding: '8px 12px',
+        borderBottom: '1px solid #37474f',
+        background: '#1e282d',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <button
+            onClick={() => setOnionSkinEnabled(!onionSkin.enabled)}
+            style={{
+              ...controlButtonStyle,
+              width: 'auto',
+              padding: '4px 10px',
+              fontSize: '11px',
+              height: '28px',
+              background: onionSkin.enabled ? '#4caf50' : '#37474f',
+            }}
+          >
+            🧅 洋葱皮 {onionSkin.enabled ? '开' : '关'}
+          </button>
+        </div>
+        {onionSkin.enabled && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', color: '#90a4ae', width: '50px' }}>前帧:</span>
+              <input
+                type="range"
+                min="0"
+                max="5"
+                value={onionSkin.prevFrames}
+                onChange={(e) => setOnionSkinPrevFrames(Number(e.target.value))}
+                style={{ flex: 1, accentColor: '#4a90d9' }}
+              />
+              <span style={{ fontSize: '11px', color: '#4a90d9', width: '20px', textAlign: 'right' }}>
+                {onionSkin.prevFrames}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', color: '#90a4ae', width: '50px' }}>后帧:</span>
+              <input
+                type="range"
+                min="0"
+                max="5"
+                value={onionSkin.nextFrames}
+                onChange={(e) => setOnionSkinNextFrames(Number(e.target.value))}
+                style={{ flex: 1, accentColor: '#e74c3c' }}
+              />
+              <span style={{ fontSize: '11px', color: '#e74c3c', width: '20px', textAlign: 'right' }}>
+                {onionSkin.nextFrames}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', color: '#90a4ae', width: '50px' }}>透明度:</span>
+              <input
+                type="range"
+                min="10"
+                max="80"
+                value={Math.round(onionSkin.opacity * 100)}
+                onChange={(e) => setOnionSkinOpacity(Number(e.target.value) / 100)}
+                style={{ flex: 1, accentColor: '#4fc3f7' }}
+              />
+              <span style={{ fontSize: '11px', color: '#4fc3f7', width: '20px', textAlign: 'right' }}>
+                {Math.round(onionSkin.opacity * 100)}%
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <span style={{ fontSize: '10px', color: '#4a90d9' }}>■ 前帧</span>
+              <span style={{ fontSize: '10px', color: '#e74c3c' }}>■ 后帧</span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{

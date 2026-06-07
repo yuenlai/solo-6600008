@@ -18,6 +18,8 @@ export const PixelGrid: React.FC = () => {
     setSelectionPosition,
     commitSelectionMove,
     applySelection,
+    onionSkin,
+    getOnionSkinFrames,
   } = useCanvasStore();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -38,13 +40,44 @@ export const PixelGrid: React.FC = () => {
   const draw = useCallback(() => {
     const ctx = canvasRef.current?.getContext('2d');
     if (!ctx) return;
-    const compositePixels = getCompositePixels();
     ctx.clearRect(0, 0, canvas.width * zoom, canvas.height * zoom);
+
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        ctx.fillStyle = (x + y) % 2 === 0 ? '#f0f0f0' : '#e0e0e0';
+        ctx.fillRect(x * zoom, y * zoom, zoom, zoom);
+      }
+    }
+
+    if (onionSkin.enabled && !isPlaying) {
+      const onionFrames = getOnionSkinFrames();
+      for (const onionFrame of onionFrames) {
+        ctx.globalAlpha = onionFrame.opacity;
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = 0; x < canvas.width; x++) {
+            const c = onionFrame.pixels[y][x];
+            if (c !== 'transparent') {
+              if (onionFrame.isPrev) {
+                ctx.fillStyle = '#4a90d9';
+              } else {
+                ctx.fillStyle = '#e74c3c';
+              }
+              ctx.fillRect(x * zoom, y * zoom, zoom, zoom);
+            }
+          }
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    const compositePixels = getCompositePixels();
     for (let y = 0; y < canvas.height; y++) {
       for (let x = 0; x < canvas.width; x++) {
         const c = compositePixels[y][x];
-        ctx.fillStyle = c === 'transparent' ? (x + y) % 2 === 0 ? '#f0f0f0' : '#e0e0e0' : c;
-        ctx.fillRect(x * zoom, y * zoom, zoom, zoom);
+        if (c !== 'transparent') {
+          ctx.fillStyle = c;
+          ctx.fillRect(x * zoom, y * zoom, zoom, zoom);
+        }
       }
     }
 
@@ -99,7 +132,7 @@ export const PixelGrid: React.FC = () => {
         activeSelection.height * zoom
       );
     }
-  }, [canvas, zoom, getCompositePixels, layers, selection, selectionPixels, tempSelection, tool, isDragging]);
+  }, [canvas, zoom, getCompositePixels, layers, selection, selectionPixels, tempSelection, tool, isDragging, onionSkin, getOnionSkinFrames, isPlaying]);
 
   useEffect(() => {
     draw();

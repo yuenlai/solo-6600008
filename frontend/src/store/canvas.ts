@@ -8,6 +8,13 @@ interface Selection {
   height: number;
 }
 
+interface OnionSkinSettings {
+  enabled: boolean;
+  prevFrames: number;
+  nextFrames: number;
+  opacity: number;
+}
+
 interface CanvasState {
   canvas: PixelCanvas;
   tool: Tool;
@@ -30,6 +37,7 @@ interface CanvasState {
   favoriteColors: string[];
   recentColors: string[];
   activePaletteName: string | null;
+  onionSkin: OnionSkinSettings;
   setTool: (t: Tool) => void;
   setColor: (c: string) => void;
   setZoom: (z: number) => void;
@@ -72,6 +80,11 @@ interface CanvasState {
   moveSelection: (dx: number, dy: number) => void;
   applySelection: () => void;
   setMirrorMode: (mode: MirrorMode) => void;
+  setOnionSkinEnabled: (enabled: boolean) => void;
+  setOnionSkinPrevFrames: (count: number) => void;
+  setOnionSkinNextFrames: (count: number) => void;
+  setOnionSkinOpacity: (opacity: number) => void;
+  getOnionSkinFrames: () => { pixels: string[][]; opacity: number; isPrev: boolean }[];
 }
 
 const emptyPixels = (w: number, h: number) => Array.from({ length: h }, () => Array(w).fill('transparent'));
@@ -138,6 +151,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     favoriteColors: [],
     recentColors: [],
     activePaletteName: null,
+    onionSkin: {
+      enabled: false,
+      prevFrames: 2,
+      nextFrames: 2,
+      opacity: 0.3,
+    },
     setTool: (tool) => set({ tool, selection: null, selectionPixels: null }),
     setColor: (color) => {
       get().addRecentColor(color);
@@ -602,5 +621,41 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       set({ selection: null, selectionPixels: null });
     },
     setMirrorMode: (mode) => set({ mirrorMode: mode }),
+    setOnionSkinEnabled: (enabled) => set({ onionSkin: { ...get().onionSkin, enabled } }),
+    setOnionSkinPrevFrames: (count) => set({ onionSkin: { ...get().onionSkin, prevFrames: Math.max(0, Math.min(10, count)) } }),
+    setOnionSkinNextFrames: (count) => set({ onionSkin: { ...get().onionSkin, nextFrames: Math.max(0, Math.min(10, count)) } }),
+    setOnionSkinOpacity: (opacity) => set({ onionSkin: { ...get().onionSkin, opacity: Math.max(0.1, Math.min(1, opacity)) } }),
+    getOnionSkinFrames: () => {
+      const { frames, currentFrame, onionSkin, getCompositePixels } = get();
+      if (!onionSkin.enabled) return [];
+
+      const result: { pixels: string[][]; opacity: number; isPrev: boolean }[] = [];
+
+      for (let i = 1; i <= onionSkin.prevFrames; i++) {
+        const frameIndex = currentFrame - i;
+        if (frameIndex >= 0) {
+          const frame = frames[frameIndex];
+          const pixels = getCompositePixels(frame.layers);
+          const opacity = onionSkin.opacity * (1 - (i - 1) * 0.2);
+          if (opacity > 0) {
+            result.push({ pixels, opacity, isPrev: true });
+          }
+        }
+      }
+
+      for (let i = 1; i <= onionSkin.nextFrames; i++) {
+        const frameIndex = currentFrame + i;
+        if (frameIndex < frames.length) {
+          const frame = frames[frameIndex];
+          const pixels = getCompositePixels(frame.layers);
+          const opacity = onionSkin.opacity * (1 - (i - 1) * 0.2);
+          if (opacity > 0) {
+            result.push({ pixels, opacity, isPrev: false });
+          }
+        }
+      }
+
+      return result;
+    },
   };
 });

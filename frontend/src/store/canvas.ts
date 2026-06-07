@@ -258,16 +258,17 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       get().setCurrentFrame(prev);
     },
     exportPNG: (scale = 1) => {
-      const { canvas, getCompositePixels } = get();
-      const compositePixels = getCompositePixels();
+      const compositePixels = get().getCompositePixels();
+      const height = compositePixels.length;
+      const width = compositePixels[0]?.length || 0;
       const exportCanvas = document.createElement('canvas');
-      exportCanvas.width = canvas.width * scale;
-      exportCanvas.height = canvas.height * scale;
+      exportCanvas.width = width * scale;
+      exportCanvas.height = height * scale;
       const ctx = exportCanvas.getContext('2d');
       if (!ctx) return;
       ctx.imageSmoothingEnabled = false;
-      for (let y = 0; y < canvas.height; y++) {
-        for (let x = 0; x < canvas.width; x++) {
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
           const color = compositePixels[y][x];
           if (color !== 'transparent') {
             ctx.fillStyle = color;
@@ -276,7 +277,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         }
       }
       const link = document.createElement('a');
-      link.download = `pixel-art-${Date.now()}.png`;
+      link.download = `pixel-art-${width}x${height}-${Date.now()}.png`;
       link.href = exportCanvas.toDataURL('image/png');
       link.click();
     },

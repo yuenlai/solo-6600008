@@ -48,17 +48,10 @@ interface HoverState {
 }
 
 export const Toolbar: React.FC = () => {
-  const { tool, setTool, color, setColor, colorChangedAt, zoom, setZoom, zoomIn, zoomOut, resetZoom, getZoomPercentage, clearCanvas, undo, redo, canUndo, canRedo, exportPNG, exportMultiSizePNG, toggleDraftPanel, toggleNewCanvasModal, toggleResizeCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode } = useCanvasStore();
+  const { tool, setTool, color, setColor, zoom, setZoom, zoomIn, zoomOut, resetZoom, getZoomPercentage, clearCanvas, undo, redo, canUndo, canRedo, exportPNG, exportMultiSizePNG, toggleDraftPanel, toggleNewCanvasModal, toggleResizeCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode } = useCanvasStore();
   const [hover, setHover] = useState<HoverState | null>(null);
-  const [colorPulseKey, setColorPulseKey] = useState(0);
 
   const currentTool = TOOLS.find(t => t.key === tool);
-
-  React.useEffect(() => {
-    if (colorChangedAt > 0) {
-      setColorPulseKey(prev => prev + 1);
-    }
-  }, [colorChangedAt]);
 
   const getToolTipContent = () => {
     if (!hover) return null;
@@ -150,65 +143,17 @@ export const Toolbar: React.FC = () => {
           >{m.label}</button>
         ))}
       </div>
-      <div style={{ borderTop: '1px solid #455a64', width: '85%', paddingTop: '10px' }}>
-        <div style={{ marginBottom: '10px', textAlign: 'center' }}>
-          <div style={{ fontSize: '10px', marginBottom: '6px', color: '#90a4ae', fontWeight: 500 }}>当前颜色</div>
+      <div style={{ borderTop: '1px solid #455a64', width: '85%', paddingTop: '8px' }}>
+        {PALETTE.map(c => (
           <div
-            key={`current-${colorPulseKey}`}
-            style={{
-              width: '44px',
-              height: '44px',
-              margin: '0 auto 6px auto',
-              borderRadius: '10px',
-              background: color,
-              border: '3px solid #fff',
-              boxShadow: `0 0 16px ${color}80, 0 2px 8px rgba(0,0,0,0.3)`,
-              animation: 'colorPulse 0.6s ease-out',
-              position: 'relative',
-            }}
-          >
-            <div style={{
-              position: 'absolute',
-              bottom: '-20px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              fontSize: '10px',
-              fontFamily: 'monospace',
-              color: '#b0bec5',
-              whiteSpace: 'nowrap',
-              background: 'rgba(0,0,0,0.6)',
-              padding: '2px 6px',
-              borderRadius: '4px',
-            }}>
-              {color.toUpperCase()}
-            </div>
-          </div>
-        </div>
-        <div style={{ fontSize: '10px', margin: '12px 0 6px 0', textAlign: 'center', color: '#90a4ae', fontWeight: 500 }}>调色板</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px', justifyItems: 'center', padding: '0 2px' }}>
-          {PALETTE.map(c => (
-            <div
-              key={c}
-              onClick={() => setColor(c)}
-              style={{ 
-                width: '26px', 
-                height: '26px', 
-                borderRadius: '6px', 
-                background: c,
-                border: color === c ? '2px solid #fff' : '2px solid #546e7a', 
-                cursor: 'pointer', 
-                transition: 'all 0.2s', 
-                boxShadow: color === c ? '0 0 6px rgba(255,255,255,0.5)' : 'none',
-                transform: color === c ? 'scale(1.1)' : 'scale(1)',
-              }}
-            />
-          ))}
-        </div>
-        <div style={{ marginTop: '8px', textAlign: 'center' }}>
-          <div style={{ fontSize: '10px', marginBottom: '4px', color: '#90a4ae', fontWeight: 500 }}>自定义</div>
-          <input type="color" value={color} onChange={e => setColor(e.target.value)}
-            style={{ width: '40px', height: '32px', cursor: 'pointer', borderRadius: '6px', border: '2px solid #546e7a', background: 'transparent' }} />
-        </div>
+            key={c}
+            onClick={() => setColor(c)}
+            style={{ width: '30px', height: '30px', margin: '3px auto', borderRadius: '6px', background: c,
+              border: color === c ? '3px solid #fff' : '2px solid #546e7a', cursor: 'pointer', transition: 'all 0.2s', boxShadow: color === c ? '0 0 8px rgba(255,255,255,0.4)' : 'none' }}
+          />
+        ))}
+        <input type="color" value={color} onChange={e => setColor(e.target.value)}
+          style={{ width: '34px', height: '34px', margin: '6px auto', display: 'block', cursor: 'pointer', borderRadius: '6px', border: '2px solid #546e7a' }} />
       </div>
       <div style={{ borderTop: '1px solid #455a64', width: '85%', paddingTop: '8px' }}>
         <div style={{ fontSize: '10px', marginBottom: '6px', textAlign: 'center', color: '#90a4ae', fontWeight: 500 }}>背景</div>
@@ -359,22 +304,6 @@ export const Toolbar: React.FC = () => {
           )}
         </div>
       )}
-      <style>{`
-        @keyframes colorPulse {
-          0% {
-            transform: scale(1);
-            box-shadow: 0 0 16px ${color}80, 0 2px 8px rgba(0,0,0,0.3);
-          }
-          50% {
-            transform: scale(1.2);
-            box-shadow: 0 0 32px ${color}cc, 0 0 48px ${color}66, 0 2px 8px rgba(0,0,0,0.3);
-          }
-          100% {
-            transform: scale(1);
-            box-shadow: 0 0 16px ${color}80, 0 2px 8px rgba(0,0,0,0.3);
-          }
-        }
-      `}</style>
     </div>
   );
 };

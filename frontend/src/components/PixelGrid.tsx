@@ -40,10 +40,6 @@ export const PixelGrid: React.FC = () => {
     undo,
     redo,
     getZoomPercentage,
-    pickerFeedback,
-    setPickerFeedback,
-    lastTool,
-    setTool,
   } = useCanvasStore();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -269,31 +265,9 @@ export const PixelGrid: React.FC = () => {
       if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
         const compositePixels = getCompositePixels();
         const pickedColor = compositePixels[y][x];
-        const isTransparent = pickedColor === 'transparent';
-        
-        const rect = canvasRef.current!.getBoundingClientRect();
-        const feedbackX = rect.left + offsetX + x * zoom + zoom / 2;
-        const feedbackY = rect.top + offsetY + y * zoom + zoom / 2;
-        
-        setPickerFeedback({
-          visible: true,
-          color: isTransparent ? '#888888' : pickedColor,
-          x: feedbackX,
-          y: feedbackY,
-          isTransparent,
-        });
-        
-        if (!isTransparent) {
+        if (pickedColor !== 'transparent') {
           setColor(pickedColor);
         }
-        
-        setTimeout(() => {
-          setPickerFeedback(null);
-        }, 1200);
-        
-        setTimeout(() => {
-          setTool(lastTool);
-        }, 300);
       }
       return;
     }
@@ -482,78 +456,6 @@ export const PixelGrid: React.FC = () => {
           <div style={{ fontSize: '12px', color: '#90a4ae' }}>{zoom}px / 像素</div>
         </div>
       )}
-      {pickerFeedback && (
-        <div
-          style={{
-            position: 'fixed',
-            left: pickerFeedback.x,
-            top: pickerFeedback.y,
-            transform: 'translate(-50%, -120%)',
-            pointerEvents: 'none',
-            zIndex: 1000,
-            animation: 'pickerFeedbackPop 0.3s ease-out',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'rgba(0, 0, 0, 0.85)',
-              padding: '10px 14px',
-              borderRadius: '10px',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-            }}
-          >
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '8px',
-                background: pickerFeedback.color,
-                border: pickerFeedback.isTransparent ? '2px dashed #666' : '2px solid #fff',
-                boxShadow: pickerFeedback.isTransparent 
-                  ? 'none' 
-                  : `0 0 16px ${pickerFeedback.color}80`,
-              }}
-            />
-            <div
-              style={{
-                fontSize: '11px',
-                fontFamily: 'monospace',
-                color: pickerFeedback.isTransparent ? '#90a4ae' : '#fff',
-                fontWeight: 'bold',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {pickerFeedback.isTransparent ? '透明' : pickerFeedback.color.toUpperCase()}
-            </div>
-            <div
-              style={{
-                fontSize: '10px',
-                color: '#64b5f6',
-              }}
-            >
-              {pickerFeedback.isTransparent ? '已跳过' : '已选取'}
-            </div>
-          </div>
-          <div
-            style={{
-              position: 'absolute',
-              left: '50%',
-              bottom: '-6px',
-              transform: 'translateX(-50%)',
-              width: 0,
-              height: 0,
-              borderLeft: '6px solid transparent',
-              borderRight: '6px solid transparent',
-              borderTop: '6px solid rgba(0, 0, 0, 0.85)',
-            }}
-          />
-        </div>
-      )}
       <style>{`
         @keyframes zoomIndicatorFade {
           from {
@@ -563,19 +465,6 @@ export const PixelGrid: React.FC = () => {
           to {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
-          }
-        }
-        @keyframes pickerFeedbackPop {
-          0% {
-            opacity: 0;
-            transform: translate(-50%, -100%) scale(0.8);
-          }
-          50% {
-            transform: translate(-50%, -125%) scale(1.05);
-          }
-          100% {
-            opacity: 1;
-            transform: translate(-50%, -120%) scale(1);
           }
         }
       `}</style>

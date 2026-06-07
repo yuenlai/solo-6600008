@@ -55,9 +55,6 @@ interface CanvasState {
   colorReplaceModalOpen: boolean;
   comparePanelOpen: boolean;
   compareDraft: Draft | null;
-  lastTool: Tool;
-  pickerFeedback: { visible: boolean; color: string; x: number; y: number; isTransparent: boolean } | null;
-  colorChangedAt: number;
   setTool: (t: Tool) => void;
   toggleTemplatePanel: () => void;
   loadTemplate: (template: PixelTemplate) => void;
@@ -133,7 +130,6 @@ interface CanvasState {
   getCompositePixelsFromDraft: (draft: Draft) => string[][];
   getPixelDifferences: (pixels1: string[][], pixels2: string[][]) => boolean[][];
   pushHistory: () => void;
-  setPickerFeedback: (feedback: { visible: boolean; color: string; x: number; y: number; isTransparent: boolean } | null) => void;
 }
 
 const emptyPixels = (w: number, h: number) => Array.from({ length: h }, () => Array(w).fill('transparent'));
@@ -242,17 +238,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     colorReplaceModalOpen: false,
     comparePanelOpen: false,
     compareDraft: null,
-    lastTool: 'pen',
-    pickerFeedback: null,
-    colorChangedAt: 0,
-    setTool: (tool) => {
-      const state = get();
-      if (state.tool !== 'picker') {
-        set({ lastTool: state.tool });
-      }
-      set({ tool, selection: null, selectionPixels: null });
-    },
-    setPickerFeedback: (feedback) => set({ pickerFeedback: feedback }),
+    setTool: (tool) => set({ tool, selection: null, selectionPixels: null }),
     toggleTemplatePanel: () => set({ templatePanelOpen: !get().templatePanelOpen }),
     loadTemplates: () => {
       set({ templates: getTemplatesWithThumbnails() });
@@ -286,7 +272,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     resetOffset: () => set({ offsetX: 0, offsetY: 0 }),
     setColor: (color) => {
       get().addRecentColor(color);
-      set({ color, colorChangedAt: Date.now() });
+      set({ color });
     },
     setZoom: (zoom) => set({ zoom }),
     zoomIn: (fine = false) => {

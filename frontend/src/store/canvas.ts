@@ -46,6 +46,8 @@ interface CanvasState {
   templatePanelOpen: boolean;
   templates: PixelTemplate[];
   colorReplaceModalOpen: boolean;
+  comparePanelOpen: boolean;
+  compareDraft: Draft | null;
   setTool: (t: Tool) => void;
   toggleTemplatePanel: () => void;
   loadTemplate: (template: PixelTemplate) => void;
@@ -108,6 +110,10 @@ interface CanvasState {
   toggleColorReplaceModal: () => void;
   getAllUsedColors: () => string[];
   replaceColor: (oldColor: string, newColor: string) => void;
+  toggleComparePanel: () => void;
+  setCompareDraft: (draft: Draft | null) => void;
+  getCompositePixelsFromDraft: (draft: Draft) => string[][];
+  getPixelDifferences: (pixels1: string[][], pixels2: string[][]) => boolean[][];
 }
 
 const emptyPixels = (w: number, h: number) => Array.from({ length: h }, () => Array(w).fill('transparent'));
@@ -187,6 +193,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     templatePanelOpen: false,
     templates: [],
     colorReplaceModalOpen: false,
+    comparePanelOpen: false,
+    compareDraft: null,
     setTool: (tool) => set({ tool, selection: null, selectionPixels: null }),
     toggleTemplatePanel: () => set({ templatePanelOpen: !get().templatePanelOpen }),
     loadTemplates: () => {
@@ -934,6 +942,39 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         history: [...get().history.slice(0, get().historyIndex + 1), get().getCompositePixels()],
         historyIndex: get().historyIndex + 1,
       });
+    },
+    toggleComparePanel: () => set({ comparePanelOpen: !get().comparePanelOpen }),
+    setCompareDraft: (draft) => set({ compareDraft: draft }),
+    getCompositePixelsFromDraft: (draft) => {
+      const { width, height } = draft.canvas;
+      const composite = emptyPixels(width, height);
+      const currentFrameLayers = draft.frames[draft.currentFrame]?.layers || [];
+      for (const layer of currentFrameLayers) {
+        if (!layer.visible) continue;
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            if (layer.pixels[y] && layer.pixels[y][x] !== 'transparent') {
+              composite[y][x] = layer.pixels[y][x];
+            }
+          }
+        }
+      }
+      return composite;
+    },
+    getPixelDifferences: (pixels1, pixels2) => {
+      const height = Math.max(pixels1.length, pixels2.length);
+      const width = Math.max(pixels1[0]?.length || 0, pixels2[0]?.length || 0);
+      const differences: boolean[][] = [];
+      for (let y = 0; y < height; y++) {
+        const row: boolean[] = [];
+        for (let x = 0; x < width; x++) {
+          const p1 = pixels1[y]?.[x] || 'transparent';
+          const p2 = pixels2[y]?.[x] || 'transparent';
+          row.push(p1 !== p2);
+        }
+        differences.push(row);
+      }
+      return differences;
     },
   };
 });

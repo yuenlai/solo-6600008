@@ -10,6 +10,7 @@ import { NewCanvasModal } from './components/NewCanvasModal';
 import { ResizeCanvasModal } from './components/ResizeCanvasModal';
 import { TemplatePanel } from './components/TemplatePanel';
 import { ColorReplaceModal } from './components/ColorReplaceModal';
+import { ComparePanel } from './components/ComparePanel';
 
 const App: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'sans-serif' }}>
@@ -28,6 +29,7 @@ const App: React.FC = () => (
     <ResizeCanvasModal />
     <TemplatePanel />
     <ColorReplaceModal />
+    <ComparePanel />
   </div>
 );
 export default App;

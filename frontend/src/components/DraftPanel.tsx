@@ -10,6 +10,8 @@ export const DraftPanel: React.FC = () => {
     deleteDraft,
     loadDrafts,
     toggleDraftPanel,
+    setCompareDraft,
+    toggleComparePanel,
   } = useCanvasStore();
   const [draftName, setDraftName] = useState('');
   const [showSaveInput, setShowSaveInput] = useState(false);
@@ -263,6 +265,25 @@ export const DraftPanel: React.FC = () => {
                         }}
                       >
                         打开
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCompareDraft(draft);
+                          toggleComparePanel();
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          background: '#ff9800',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                        }}
+                        title="与当前版本对比"
+                      >
+                        对比
                       </button>
                       <button
                         onClick={(e) => {

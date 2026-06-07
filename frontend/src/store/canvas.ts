@@ -103,6 +103,7 @@ interface CanvasState {
   getOnionSkinFrames: () => { pixels: string[][]; opacity: number; isPrev: boolean }[];
   drawRect: (x: number, y: number, width: number, height: number, fill?: boolean) => void;
   drawLine: (x1: number, y1: number, x2: number, y2: number) => void;
+  addOutline: (strokeColor: string, thickness?: number) => void;
 }
 
 const emptyPixels = (w: number, h: number) => Array.from({ length: h }, () => Array(w).fill('transparent'));
@@ -837,6 +838,52 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
             y += sy;
           }
         }
+        return { ...layer, pixels };
+      });
+      const newFrames = frames.map((f, i) =>
+        i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
+      );
+      set({ layers: newLayers, frames: newFrames, history: [...get().history.slice(0, get().historyIndex + 1), get().getCompositePixels()], historyIndex: get().historyIndex + 1 });
+    },
+    addOutline: (strokeColor, thickness = 1) => {
+      const { canvas, layers, currentLayerId, currentFrame, frames } = get();
+      const newLayers = layers.map(layer => {
+        if (layer.id !== currentLayerId) return layer;
+        const pixels = layer.pixels.map(r => [...r]);
+        const outlinePositions: [number, number][] = [];
+
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = 0; x < canvas.width; x++) {
+            if (pixels[y][x] === 'transparent') continue;
+
+            for (let t = 1; t <= thickness; t++) {
+              const directions = [
+                [-t, 0], [t, 0], [0, -t], [0, t],
+                [-t, -t], [t, -t], [-t, t], [t, t],
+              ];
+
+              for (const [dx, dy] of directions) {
+                const nx = x + dx;
+                const ny = y + dy;
+                if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
+                  if (pixels[ny][nx] === 'transparent') {
+                    outlinePositions.push([nx, ny]);
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        const seen = new Set<string>();
+        for (const [x, y] of outlinePositions) {
+          const key = `${x},${y}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            pixels[y][x] = strokeColor;
+          }
+        }
+
         return { ...layer, pixels };
       });
       const newFrames = frames.map((f, i) =>

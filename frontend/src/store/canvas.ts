@@ -36,6 +36,7 @@ interface CanvasState {
   setPlaybackSpeed: (speed: number) => void;
   nextFrame: () => void;
   prevFrame: () => void;
+  exportPNG: (scale?: number) => void;
 }
 
 const emptyPixels = (w: number, h: number) => Array.from({ length: h }, () => Array(w).fill('transparent'));
@@ -255,6 +256,29 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       const { currentFrame, frames } = get();
       const prev = (currentFrame - 1 + frames.length) % frames.length;
       get().setCurrentFrame(prev);
+    },
+    exportPNG: (scale = 1) => {
+      const { canvas, getCompositePixels } = get();
+      const compositePixels = getCompositePixels();
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = canvas.width * scale;
+      exportCanvas.height = canvas.height * scale;
+      const ctx = exportCanvas.getContext('2d');
+      if (!ctx) return;
+      ctx.imageSmoothingEnabled = false;
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const color = compositePixels[y][x];
+          if (color !== 'transparent') {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * scale, y * scale, scale, scale);
+          }
+        }
+      }
+      const link = document.createElement('a');
+      link.download = `pixel-art-${Date.now()}.png`;
+      link.href = exportCanvas.toDataURL('image/png');
+      link.click();
     },
   };
 });

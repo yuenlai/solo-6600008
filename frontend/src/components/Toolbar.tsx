@@ -11,7 +11,7 @@ const TOOLS: { key: Tool; label: string }[] = [
 const PALETTE = ['#000000','#ffffff','#e53935','#43a047','#1e88e5','#fdd835','#8e24aa','#ff6f00','#00acc1','#795548'];
 
 export const Toolbar: React.FC = () => {
-  const { tool, setTool, color, setColor, zoom, setZoom, clearCanvas, undo } = useCanvasStore();
+  const { tool, setTool, color, setColor, zoom, setZoom, clearCanvas, undo, exportPNG } = useCanvasStore();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '12px', background: '#263238', color: '#fff', width: '60px', alignItems: 'center' }}>
       {TOOLS.map(t => (
@@ -35,6 +35,10 @@ export const Toolbar: React.FC = () => {
       </div>
       <button onClick={undo} style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#37474f', cursor: 'pointer', fontSize: '14px' }}>↩️</button>
       <button onClick={clearCanvas} style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#b71c1c', color: '#fff', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>
+      <div style={{ borderTop: '1px solid #546e7a', width: '100%', paddingTop: '8px' }}>
+        <button onClick={() => exportPNG(1)} title="导出 PNG (1:1)" style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#1565c0', color: '#fff', cursor: 'pointer', fontSize: '18px', marginBottom: '4px' }}>💾</button>
+        <button onClick={() => exportPNG(4)} title="导出 PNG (4x)" style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#2e7d32', color: '#fff', cursor: 'pointer', fontSize: '12px' }}>4x</button>
+      </div>
     </div>
   );
 };

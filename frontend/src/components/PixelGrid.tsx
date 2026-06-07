@@ -20,14 +20,24 @@ export const PixelGrid: React.FC = () => {
     applySelection,
     onionSkin,
     getOnionSkinFrames,
+    offsetX,
+    offsetY,
+    setOffset,
+    color,
+    setColor,
   } = useCanvasStore();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const drawingRef = useRef(false);
   const [selectStart, setSelectStart] = useState<[number, number] | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<[number, number]>([0, 0]);
   const [tempSelection, setTempSelection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState<[number, number]>([0, 0]);
+  const [panOffsetStart, setPanOffsetStart] = useState<[number, number]>([0, 0]);
+  const [spacePressed, setSpacePressed] = useState(false);
 
   const isPointInSelection = useCallback(
     (x: number, y: number) => {
@@ -37,15 +47,37 @@ export const PixelGrid: React.FC = () => {
     [selection]
   );
 
+  const resizeCanvas = useCallback(() => {
+    const canvasEl = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvasEl || !container) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = container.getBoundingClientRect();
+    canvasEl.width = rect.width * dpr;
+    canvasEl.height = rect.height * dpr;
+    const ctx = canvasEl.getContext('2d');
+    if (ctx) {
+      ctx.scale(dpr, dpr);
+    }
+    canvasEl.style.width = `${rect.width}px`;
+    canvasEl.style.height = `${rect.height}px`;
+  }, []);
+
   const draw = useCallback(() => {
     const ctx = canvasRef.current?.getContext('2d');
     if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width * zoom, canvas.height * zoom);
+    const canvasEl = canvasRef.current!;
+    const dpr = window.devicePixelRatio || 1;
+    ctx.clearRect(0, 0, canvasEl.width / dpr, canvasEl.height / dpr);
+
+    const pixelSize = zoom;
+    const startX = offsetX;
+    const startY = offsetY;
 
     for (let y = 0; y < canvas.height; y++) {
       for (let x = 0; x < canvas.width; x++) {
         ctx.fillStyle = (x + y) % 2 === 0 ? '#f0f0f0' : '#e0e0e0';
-        ctx.fillRect(x * zoom, y * zoom, zoom, zoom);
+        ctx.fillRect(startX + x * pixelSize, startY + y * pixelSize, pixelSize, pixelSize);
       }
     }
 
@@ -62,7 +94,7 @@ export const PixelGrid: React.FC = () => {
               } else {
                 ctx.fillStyle = '#e74c3c';
               }
-              ctx.fillRect(x * zoom, y * zoom, zoom, zoom);
+              ctx.fillRect(startX + x * pixelSize, startY + y * pixelSize, pixelSize, pixelSize);
             }
           }
         }
@@ -76,7 +108,7 @@ export const PixelGrid: React.FC = () => {
         const c = compositePixels[y][x];
         if (c !== 'transparent') {
           ctx.fillStyle = c;
-          ctx.fillRect(x * zoom, y * zoom, zoom, zoom);
+          ctx.fillRect(startX + x * pixelSize, startY + y * pixelSize, pixelSize, pixelSize);
         }
       }
     }
@@ -90,7 +122,7 @@ export const PixelGrid: React.FC = () => {
             const cy = selection.y + py;
             if (cx >= 0 && cx < canvas.width && cy >= 0 && cy < canvas.height) {
               ctx.fillStyle = color;
-              ctx.fillRect(cx * zoom, cy * zoom, zoom, zoom);
+              ctx.fillRect(startX + cx * pixelSize, startY + cy * pixelSize, pixelSize, pixelSize);
             }
           }
         }
@@ -101,14 +133,14 @@ export const PixelGrid: React.FC = () => {
     ctx.lineWidth = 0.5;
     for (let x = 0; x <= canvas.width; x++) {
       ctx.beginPath();
-      ctx.moveTo(x * zoom, 0);
-      ctx.lineTo(x * zoom, canvas.height * zoom);
+      ctx.moveTo(startX + x * pixelSize, startY);
+      ctx.lineTo(startX + x * pixelSize, startY + canvas.height * pixelSize);
       ctx.stroke();
     }
     for (let y = 0; y <= canvas.height; y++) {
       ctx.beginPath();
-      ctx.moveTo(0, y * zoom);
-      ctx.lineTo(canvas.width * zoom, y * zoom);
+      ctx.moveTo(startX, startY + y * pixelSize);
+      ctx.lineTo(startX + canvas.width * pixelSize, startY + y * pixelSize);
       ctx.stroke();
     }
 
@@ -118,34 +150,92 @@ export const PixelGrid: React.FC = () => {
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 3]);
       ctx.strokeRect(
-        activeSelection.x * zoom,
-        activeSelection.y * zoom,
-        activeSelection.width * zoom,
-        activeSelection.height * zoom
+        startX + activeSelection.x * pixelSize,
+        startY + activeSelection.y * pixelSize,
+        activeSelection.width * pixelSize,
+        activeSelection.height * pixelSize
       );
       ctx.setLineDash([]);
       ctx.fillStyle = 'rgba(33, 150, 243, 0.1)';
       ctx.fillRect(
-        activeSelection.x * zoom,
-        activeSelection.y * zoom,
-        activeSelection.width * zoom,
-        activeSelection.height * zoom
+        startX + activeSelection.x * pixelSize,
+        startY + activeSelection.y * pixelSize,
+        activeSelection.width * pixelSize,
+        activeSelection.height * pixelSize
       );
     }
-  }, [canvas, zoom, getCompositePixels, layers, selection, selectionPixels, tempSelection, tool, isDragging, onionSkin, getOnionSkinFrames, isPlaying]);
+  }, [canvas, zoom, getCompositePixels, layers, selection, selectionPixels, tempSelection, tool, isDragging, onionSkin, getOnionSkinFrames, isPlaying, offsetX, offsetY]);
+
+  useEffect(() => {
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    return () => window.removeEventListener('resize', resizeCanvas);
+  }, [resizeCanvas]);
 
   useEffect(() => {
     draw();
   }, [draw]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !spacePressed && !e.repeat) {
+        e.preventDefault();
+        setSpacePressed(true);
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setSpacePressed(false);
+        if (isPanning) {
+          setIsPanning(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [spacePressed, isPanning]);
+
   const getPixel = (e: React.MouseEvent): [number, number] => {
     const rect = canvasRef.current!.getBoundingClientRect();
-    return [Math.floor((e.clientX - rect.left) / zoom), Math.floor((e.clientY - rect.top) / zoom)];
+    const x = Math.floor((e.clientX - rect.left - offsetX) / zoom);
+    const y = Math.floor((e.clientY - rect.top - offsetY) / zoom);
+    return [x, y];
   };
+
+  const getCanvasPoint = (e: React.MouseEvent): [number, number] => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    return [e.clientX - rect.left, e.clientY - rect.top];
+  };
+
+  const isPanMode = tool === 'hand' || spacePressed;
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (isPlaying) return;
+
+    if (isPanMode) {
+      setIsPanning(true);
+      const [x, y] = getCanvasPoint(e);
+      setPanStart([x, y]);
+      setPanOffsetStart([offsetX, offsetY]);
+      return;
+    }
+
     const [x, y] = getPixel(e);
+
+    if (tool === 'picker') {
+      if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
+        const compositePixels = getCompositePixels();
+        const pickedColor = compositePixels[y][x];
+        if (pickedColor !== 'transparent') {
+          setColor(pickedColor);
+        }
+      }
+      return;
+    }
 
     if (tool === 'select') {
       if (selection && isPointInSelection(x, y)) {
@@ -173,6 +263,14 @@ export const PixelGrid: React.FC = () => {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    if (isPanning) {
+      const [x, y] = getCanvasPoint(e);
+      const dx = x - panStart[0];
+      const dy = y - panStart[1];
+      setOffset(panOffsetStart[0] + dx, panOffsetStart[1] + dy);
+      return;
+    }
+
     const [x, y] = getPixel(e);
 
     if (tool === 'select') {
@@ -202,6 +300,11 @@ export const PixelGrid: React.FC = () => {
   };
 
   const handleMouseUp = () => {
+    if (isPanning) {
+      setIsPanning(false);
+      return;
+    }
+
     if (tool === 'select') {
       if (selectStart && tempSelection) {
         setSelection(tempSelection);
@@ -219,6 +322,11 @@ export const PixelGrid: React.FC = () => {
   };
 
   const handleMouseLeave = () => {
+    if (isPanning) {
+      setIsPanning(false);
+      return;
+    }
+
     if (tool === 'select') {
       if (selectStart && tempSelection) {
         setSelection(tempSelection);
@@ -235,28 +343,46 @@ export const PixelGrid: React.FC = () => {
     drawingRef.current = false;
   };
 
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -4 : 4;
+    const newZoom = Math.max(4, Math.min(40, zoom + delta));
+    useCanvasStore.getState().setZoom(newZoom);
+  };
+
   const getCursor = () => {
     if (isPlaying) return 'default';
-    if (tool === 'select') {
-      return 'crosshair';
-    }
+    if (isPanning) return 'grabbing';
+    if (isPanMode) return 'grab';
+    if (tool === 'picker') return 'crosshair';
+    if (tool === 'select') return 'crosshair';
     return 'crosshair';
   };
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={canvas.width * zoom}
-      height={canvas.height * zoom}
+    <div
+      ref={containerRef}
       style={{
-        cursor: getCursor(),
-        imageRendering: 'pixelated',
-        pointerEvents: isPlaying ? 'none' : 'auto',
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        position: 'relative',
       }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}
-    />
+      onWheel={handleWheel}
+    >
+      <canvas
+        ref={canvasRef}
+        style={{
+          cursor: getCursor(),
+          imageRendering: 'pixelated',
+          pointerEvents: isPlaying ? 'none' : 'auto',
+          display: 'block',
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+      />
+    </div>
   );
 };

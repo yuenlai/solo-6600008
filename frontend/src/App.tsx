@@ -13,7 +13,7 @@ const App: React.FC = () => (
     <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
       <Toolbar />
       <PalettePanel />
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#37474f', overflow: 'auto' }}>
+      <div style={{ flex: 1, display: 'flex', background: '#37474f', overflow: 'hidden' }}>
         <PixelGrid />
       </div>
       <ShapePanel />

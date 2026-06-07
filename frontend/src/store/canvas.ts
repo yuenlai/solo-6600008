@@ -38,9 +38,13 @@ interface CanvasState {
   recentColors: string[];
   activePaletteName: string | null;
   onionSkin: OnionSkinSettings;
+  offsetX: number;
+  offsetY: number;
   setTool: (t: Tool) => void;
   setColor: (c: string) => void;
   setZoom: (z: number) => void;
+  setOffset: (x: number, y: number) => void;
+  resetOffset: () => void;
   toggleFavoriteColor: (c: string) => void;
   addRecentColor: (c: string) => void;
   setActivePaletteName: (name: string | null) => void;
@@ -159,7 +163,11 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       nextFrames: 2,
       opacity: 0.3,
     },
+    offsetX: 0,
+    offsetY: 0,
     setTool: (tool) => set({ tool, selection: null, selectionPixels: null }),
+    setOffset: (x, y) => set({ offsetX: x, offsetY: y }),
+    resetOffset: () => set({ offsetX: 0, offsetY: 0 }),
     setColor: (color) => {
       get().addRecentColor(color);
       set({ color });

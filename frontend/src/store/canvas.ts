@@ -339,6 +339,30 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         return positions;
       };
 
+      let fillPositions: [number, number][] | null = null;
+      if (tool === 'fill') {
+        const compositeSnapshot = getCompositePixels();
+        const target = compositeSnapshot[y][x];
+        if (target !== color) {
+          const visited = new Set<string>();
+          const stack: [number, number][] = [[x, y]];
+          const positions: [number, number][] = [];
+          while (stack.length > 0) {
+            const [cx, cy] = stack.pop()!;
+            if (cx < 0 || cx >= canvas.width || cy < 0 || cy >= canvas.height) continue;
+            const key = `${cx},${cy}`;
+            if (visited.has(key)) continue;
+            if (compositeSnapshot[cy][cx] !== target) continue;
+            visited.add(key);
+            positions.push([cx, cy]);
+            stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
+          }
+          fillPositions = positions;
+        } else {
+          fillPositions = [];
+        }
+      }
+
       const newLayers = layers.map(layer => {
         if (layer.id !== currentLayerId) return layer;
         const pixels = layer.pixels.map(r => [...r]);
@@ -350,22 +374,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
               pixels[py][px] = tool === 'pen' ? color : 'transparent';
             }
           }
-        } else if (tool === 'fill') {
-          const compositePixels = getCompositePixels();
-          const target = compositePixels[y][x];
-          if (target !== color) {
-            const visited = new Set<string>();
-            const stack = [[x, y]];
-            while (stack.length) {
-              const [cx, cy] = stack.pop()!;
-              if (cx < 0 || cx >= canvas.width || cy < 0 || cy >= canvas.height) continue;
-              const key = `${cx},${cy}`;
-              if (visited.has(key)) continue;
-              if (compositePixels[cy][cx] !== target) continue;
-              visited.add(key);
-              pixels[cy][cx] = color;
-              stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
-            }
+        } else if (tool === 'fill' && fillPositions) {
+          for (const [cx, cy] of fillPositions) {
+            pixels[cy][cx] = color;
           }
         }
         return { ...layer, pixels };

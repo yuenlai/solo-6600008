@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Tool, AnimationFrame, PixelCanvas, Layer, Draft } from '../types';
+import { Tool, AnimationFrame, PixelCanvas, Layer, Draft, MirrorMode } from '../types';
 
 interface Selection {
   x: number;
@@ -26,6 +26,7 @@ interface CanvasState {
   newCanvasModalOpen: boolean;
   selection: Selection | null;
   selectionPixels: string[][] | null;
+  mirrorMode: MirrorMode;
   setTool: (t: Tool) => void;
   setColor: (c: string) => void;
   setZoom: (z: number) => void;
@@ -64,6 +65,7 @@ interface CanvasState {
   commitSelectionMove: () => void;
   moveSelection: (dx: number, dy: number) => void;
   applySelection: () => void;
+  setMirrorMode: (mode: MirrorMode) => void;
 }
 
 const emptyPixels = (w: number, h: number) => Array.from({ length: h }, () => Array(w).fill('transparent'));
@@ -126,18 +128,53 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     newCanvasModalOpen: false,
     selection: null,
     selectionPixels: null,
+    mirrorMode: 'none',
     setTool: (tool) => set({ tool, selection: null, selectionPixels: null }),
     setColor: (color) => set({ color }),
     setZoom: (zoom) => set({ zoom }),
     setPixel: (x, y) => {
-      const { canvas, color, tool, layers, currentLayerId, currentFrame, frames } = get();
+      const { canvas, color, tool, layers, currentLayerId, currentFrame, frames, mirrorMode } = get();
       if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) return;
+
+      const getMirroredPositions = (px: number, py: number): [number, number][] => {
+        const positions: [number, number][] = [[px, py]];
+        const midX = (canvas.width - 1) / 2;
+        const midY = (canvas.height - 1) / 2;
+
+        if (mirrorMode === 'horizontal' || mirrorMode === 'both') {
+          const mirroredX = Math.round(2 * midX - px);
+          if (mirroredX !== px) {
+            positions.push([mirroredX, py]);
+          }
+        }
+        if (mirrorMode === 'vertical' || mirrorMode === 'both') {
+          const mirroredY = Math.round(2 * midY - py);
+          if (mirroredY !== py) {
+            positions.push([px, mirroredY]);
+          }
+        }
+        if (mirrorMode === 'both') {
+          const mirroredX = Math.round(2 * midX - px);
+          const mirroredY = Math.round(2 * midY - py);
+          if (mirroredX !== px || mirroredY !== py) {
+            positions.push([mirroredX, mirroredY]);
+          }
+        }
+        return positions;
+      };
+
       const newLayers = layers.map(layer => {
         if (layer.id !== currentLayerId) return layer;
         const pixels = layer.pixels.map(r => [...r]);
-        if (tool === 'pen') pixels[y][x] = color;
-        else if (tool === 'eraser') pixels[y][x] = 'transparent';
-        else if (tool === 'fill') {
+
+        if (tool === 'pen' || tool === 'eraser') {
+          const positions = getMirroredPositions(x, y);
+          for (const [px, py] of positions) {
+            if (px >= 0 && px < canvas.width && py >= 0 && py < canvas.height) {
+              pixels[py][px] = tool === 'pen' ? color : 'transparent';
+            }
+          }
+        } else if (tool === 'fill') {
           const target = pixels[y][x];
           const stack = [[x, y]];
           while (stack.length) {
@@ -537,5 +574,6 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     applySelection: () => {
       set({ selection: null, selectionPixels: null });
     },
+    setMirrorMode: (mode) => set({ mirrorMode: mode }),
   };
 });

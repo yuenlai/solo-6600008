@@ -1,4 +1,5 @@
 export type Tool = 'pen' | 'eraser' | 'fill' | 'picker' | 'line' | 'rect' | 'select';
+export type MirrorMode = 'none' | 'horizontal' | 'vertical' | 'both';
 
 export interface AnimationFrame {
   id: string;

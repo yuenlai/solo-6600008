@@ -59,6 +59,9 @@ interface CanvasState {
   createNewCanvas: (width: number, height: number) => void;
   setSelection: (selection: Selection | null) => void;
   captureSelectionPixels: () => void;
+  clearSelectionArea: () => void;
+  setSelectionPosition: (x: number, y: number) => void;
+  commitSelectionMove: () => void;
   moveSelection: (dx: number, dy: number) => void;
   applySelection: () => void;
 }
@@ -441,6 +444,58 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         pixels.push(row);
       }
       set({ selectionPixels: pixels });
+    },
+    clearSelectionArea: () => {
+      const { selection, layers, currentLayerId, currentFrame, frames, canvas } = get();
+      if (!selection) return;
+      const newLayers = layers.map(layer => {
+        if (layer.id !== currentLayerId) return layer;
+        const pixels = layer.pixels.map(r => [...r]);
+        for (let py = 0; py < selection.height; py++) {
+          for (let px = 0; px < selection.width; px++) {
+            const cx = selection.x + px;
+            const cy = selection.y + py;
+            if (cx >= 0 && cx < canvas.width && cy >= 0 && cy < canvas.height) {
+              pixels[cy][cx] = 'transparent';
+            }
+          }
+        }
+        return { ...layer, pixels };
+      });
+      const newFrames = frames.map((f, i) =>
+        i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
+      );
+      set({ layers: newLayers, frames: newFrames });
+    },
+    setSelectionPosition: (x, y) => {
+      const { selection } = get();
+      if (!selection) return;
+      set({ selection: { ...selection, x, y } });
+    },
+    commitSelectionMove: () => {
+      const { selection, selectionPixels, layers, currentLayerId, currentFrame, frames, canvas } = get();
+      if (!selection || !selectionPixels) return;
+      const newLayers = layers.map(layer => {
+        if (layer.id !== currentLayerId) return layer;
+        const pixels = layer.pixels.map(r => [...r]);
+        for (let py = 0; py < selectionPixels.length; py++) {
+          for (let px = 0; px < selectionPixels[py].length; px++) {
+            const cx = selection.x + px;
+            const cy = selection.y + py;
+            if (cx >= 0 && cx < canvas.width && cy >= 0 && cy < canvas.height) {
+              const color = selectionPixels[py][px];
+              if (color !== 'transparent') {
+                pixels[cy][cx] = color;
+              }
+            }
+          }
+        }
+        return { ...layer, pixels };
+      });
+      const newFrames = frames.map((f, i) =>
+        i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
+      );
+      set({ layers: newLayers, frames: newFrames });
     },
     moveSelection: (dx, dy) => {
       const { selection, layers, currentLayerId, currentFrame, frames, selectionPixels, canvas } = get();

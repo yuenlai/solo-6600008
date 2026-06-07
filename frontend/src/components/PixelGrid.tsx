@@ -11,9 +11,12 @@ export const PixelGrid: React.FC = () => {
     layers,
     isPlaying,
     selection,
+    selectionPixels,
     setSelection,
     captureSelectionPixels,
-    moveSelection,
+    clearSelectionArea,
+    setSelectionPosition,
+    commitSelectionMove,
     applySelection,
   } = useCanvasStore();
 
@@ -44,6 +47,23 @@ export const PixelGrid: React.FC = () => {
         ctx.fillRect(x * zoom, y * zoom, zoom, zoom);
       }
     }
+
+    if (isDragging && selection && selectionPixels) {
+      for (let py = 0; py < selectionPixels.length; py++) {
+        for (let px = 0; px < selectionPixels[py].length; px++) {
+          const color = selectionPixels[py][px];
+          if (color !== 'transparent') {
+            const cx = selection.x + px;
+            const cy = selection.y + py;
+            if (cx >= 0 && cx < canvas.width && cy >= 0 && cy < canvas.height) {
+              ctx.fillStyle = color;
+              ctx.fillRect(cx * zoom, cy * zoom, zoom, zoom);
+            }
+          }
+        }
+      }
+    }
+
     ctx.strokeStyle = '#ddd';
     ctx.lineWidth = 0.5;
     for (let x = 0; x <= canvas.width; x++) {
@@ -79,7 +99,7 @@ export const PixelGrid: React.FC = () => {
         activeSelection.height * zoom
       );
     }
-  }, [canvas, zoom, getCompositePixels, layers, selection, tempSelection, tool]);
+  }, [canvas, zoom, getCompositePixels, layers, selection, selectionPixels, tempSelection, tool, isDragging]);
 
   useEffect(() => {
     draw();
@@ -99,7 +119,12 @@ export const PixelGrid: React.FC = () => {
         setIsDragging(true);
         setDragOffset([x - selection.x, y - selection.y]);
         captureSelectionPixels();
+        clearSelectionArea();
       } else {
+        if (isDragging) {
+          commitSelectionMove();
+          setIsDragging(false);
+        }
         applySelection();
         setSelectStart([x, y]);
         setTempSelection({ x, y, width: 1, height: 1 });
@@ -133,11 +158,7 @@ export const PixelGrid: React.FC = () => {
       } else if (isDragging && selection) {
         const newX = x - dragOffset[0];
         const newY = y - dragOffset[1];
-        const dx = newX - selection.x;
-        const dy = newY - selection.y;
-        if (dx !== 0 || dy !== 0) {
-          moveSelection(dx, dy);
-        }
+        setSelectionPosition(newX, newY);
       }
       return;
     }
@@ -155,7 +176,10 @@ export const PixelGrid: React.FC = () => {
         setTempSelection(null);
         setSelectStart(null);
       }
-      setIsDragging(false);
+      if (isDragging) {
+        commitSelectionMove();
+        setIsDragging(false);
+      }
       return;
     }
     drawingRef.current = false;
@@ -169,7 +193,10 @@ export const PixelGrid: React.FC = () => {
         setTempSelection(null);
         setSelectStart(null);
       }
-      setIsDragging(false);
+      if (isDragging) {
+        commitSelectionMove();
+        setIsDragging(false);
+      }
       return;
     }
     drawingRef.current = false;

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Tool, AnimationFrame, PixelCanvas, Layer, Draft, MirrorMode } from '../types';
+import { Tool, AnimationFrame, PixelCanvas, Layer, Draft, MirrorMode, BackgroundMode } from '../types';
 
 interface Selection {
   x: number;
@@ -40,7 +40,9 @@ interface CanvasState {
   onionSkin: OnionSkinSettings;
   offsetX: number;
   offsetY: number;
+  backgroundMode: BackgroundMode;
   setTool: (t: Tool) => void;
+  setBackgroundMode: (mode: BackgroundMode) => void;
   setColor: (c: string) => void;
   setZoom: (z: number) => void;
   setOffset: (x: number, y: number) => void;
@@ -165,7 +167,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     },
     offsetX: 0,
     offsetY: 0,
+    backgroundMode: 'checkerboard',
     setTool: (tool) => set({ tool, selection: null, selectionPixels: null }),
+    setBackgroundMode: (mode) => set({ backgroundMode: mode }),
     setOffset: (x, y) => set({ offsetX: x, offsetY: y }),
     resetOffset: () => set({ offsetX: 0, offsetY: 0 }),
     setColor: (color) => {

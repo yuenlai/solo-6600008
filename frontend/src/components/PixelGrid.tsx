@@ -1,5 +1,16 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { useCanvasStore } from '../store/canvas';
+import { BackgroundMode } from '../types';
+
+const BACKGROUND_COLORS: Record<BackgroundMode, string | [string, string]> = {
+  checkerboard: ['#f0f0f0', '#e0e0e0'],
+  white: '#ffffff',
+  black: '#000000',
+  gray: '#888888',
+  dark: '#263238',
+  blue: '#1565c0',
+  green: '#2e7d32',
+};
 
 export const PixelGrid: React.FC = () => {
   const {
@@ -25,6 +36,7 @@ export const PixelGrid: React.FC = () => {
     setOffset,
     color,
     setColor,
+    backgroundMode,
   } = useCanvasStore();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -74,10 +86,20 @@ export const PixelGrid: React.FC = () => {
     const startX = offsetX;
     const startY = offsetY;
 
-    for (let y = 0; y < canvas.height; y++) {
-      for (let x = 0; x < canvas.width; x++) {
-        ctx.fillStyle = (x + y) % 2 === 0 ? '#f0f0f0' : '#e0e0e0';
-        ctx.fillRect(startX + x * pixelSize, startY + y * pixelSize, pixelSize, pixelSize);
+    const bg = BACKGROUND_COLORS[backgroundMode];
+    if (Array.isArray(bg)) {
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          ctx.fillStyle = (x + y) % 2 === 0 ? bg[0] : bg[1];
+          ctx.fillRect(startX + x * pixelSize, startY + y * pixelSize, pixelSize, pixelSize);
+        }
+      }
+    } else {
+      ctx.fillStyle = bg;
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          ctx.fillRect(startX + x * pixelSize, startY + y * pixelSize, pixelSize, pixelSize);
+        }
       }
     }
 
@@ -164,7 +186,7 @@ export const PixelGrid: React.FC = () => {
         activeSelection.height * pixelSize
       );
     }
-  }, [canvas, zoom, getCompositePixels, layers, selection, selectionPixels, tempSelection, tool, isDragging, onionSkin, getOnionSkinFrames, isPlaying, offsetX, offsetY]);
+  }, [canvas, zoom, getCompositePixels, layers, selection, selectionPixels, tempSelection, tool, isDragging, onionSkin, getOnionSkinFrames, isPlaying, offsetX, offsetY, backgroundMode]);
 
   useEffect(() => {
     resizeCanvas();

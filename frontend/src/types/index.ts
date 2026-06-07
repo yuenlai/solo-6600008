@@ -1,5 +1,6 @@
 export type Tool = 'pen' | 'eraser' | 'fill' | 'picker' | 'line' | 'rect' | 'select' | 'hand';
 export type MirrorMode = 'none' | 'horizontal' | 'vertical' | 'both';
+export type BackgroundMode = 'checkerboard' | 'white' | 'black' | 'gray' | 'dark' | 'blue' | 'green';
 
 export interface AnimationFrame {
   id: string;

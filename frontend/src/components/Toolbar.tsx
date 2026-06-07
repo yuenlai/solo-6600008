@@ -1,6 +1,6 @@
 import React from 'react';
 import { useCanvasStore } from '../store/canvas';
-import { Tool, MirrorMode } from '../types';
+import { Tool, MirrorMode, BackgroundMode } from '../types';
 
 const MIRROR_MODES: { key: MirrorMode; label: string; title: string }[] = [
   { key: 'none', label: '◯', title: '关闭镜像' },
@@ -18,8 +18,18 @@ const TOOLS: { key: Tool; label: string }[] = [
 
 const PALETTE = ['#000000','#ffffff','#e53935','#43a047','#1e88e5','#fdd835','#8e24aa','#ff6f00','#00acc1','#795548'];
 
+const BACKGROUND_MODES: { key: BackgroundMode; label: string; title: string; color: string | [string, string] }[] = [
+  { key: 'checkerboard', label: '▦', title: '棋盘格', color: ['#f0f0f0', '#e0e0e0'] },
+  { key: 'white', label: '⬜', title: '白色', color: '#ffffff' },
+  { key: 'black', label: '⬛', title: '黑色', color: '#000000' },
+  { key: 'gray', label: '🔲', title: '灰色', color: '#888888' },
+  { key: 'dark', label: '🌑', title: '深色', color: '#263238' },
+  { key: 'blue', label: '🔵', title: '蓝色', color: '#1565c0' },
+  { key: 'green', label: '🟢', title: '绿色', color: '#2e7d32' },
+];
+
 export const Toolbar: React.FC = () => {
-  const { tool, setTool, color, setColor, zoom, setZoom, clearCanvas, undo, exportPNG, toggleDraftPanel, toggleNewCanvasModal, mirrorMode, setMirrorMode } = useCanvasStore();
+  const { tool, setTool, color, setColor, zoom, setZoom, clearCanvas, undo, exportPNG, toggleDraftPanel, toggleNewCanvasModal, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode } = useCanvasStore();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '12px', background: '#263238', color: '#fff', width: '60px', alignItems: 'center' }}>
       <button onClick={toggleNewCanvasModal} title="新建画布" style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#7b1fa2', color: '#fff', cursor: 'pointer', fontSize: '18px' }}>➕</button>
@@ -45,6 +55,19 @@ export const Toolbar: React.FC = () => {
         ))}
         <input type="color" value={color} onChange={e => setColor(e.target.value)}
           style={{ width: '32px', height: '32px', margin: '4px auto', display: 'block', cursor: 'pointer' }} />
+      </div>
+      <div style={{ borderTop: '1px solid #546e7a', width: '100%', paddingTop: '8px' }}>
+        <div style={{ fontSize: '10px', marginBottom: '4px', textAlign: 'center' }}>背景</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '2px', justifyItems: 'center' }}>
+          {BACKGROUND_MODES.map(bg => (
+            <button key={bg.key} onClick={() => setBackgroundMode(bg.key)} title={bg.title}
+              style={{ width: '24px', height: '24px', borderRadius: '4px', border: 'none',
+                background: Array.isArray(bg.color) ? `linear-gradient(45deg, ${bg.color[0]} 25%, ${bg.color[1]} 25%, ${bg.color[1]} 50%, ${bg.color[0]} 50%, ${bg.color[0]} 75%, ${bg.color[1]} 75%)` : bg.color,
+                backgroundSize: Array.isArray(bg.color) ? '8px 8px' : 'auto',
+                boxShadow: backgroundMode === bg.key ? '0 0 0 2px #fff' : 'none',
+                cursor: 'pointer', fontSize: '10px' }}>{bg.label}</button>
+          ))}
+        </div>
       </div>
       <div style={{ borderTop: '1px solid #546e7a', width: '100%', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
         <button onClick={() => setZoom(Math.min(zoom + 4, 40))} style={{ width: '36px', height: '28px', borderRadius: '4px', border: 'none', background: '#37474f', color: '#fff', cursor: 'pointer' }}>+</button>

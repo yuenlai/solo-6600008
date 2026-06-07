@@ -4,6 +4,7 @@ import { Toolbar } from './components/Toolbar';
 import { LayerPanel } from './components/LayerPanel';
 import { AnimationPanel } from './components/AnimationPanel';
 import { DraftPanel } from './components/DraftPanel';
+import { NewCanvasModal } from './components/NewCanvasModal';
 
 const App: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'sans-serif' }}>
@@ -16,6 +17,7 @@ const App: React.FC = () => (
     </div>
     <AnimationPanel />
     <DraftPanel />
+    <NewCanvasModal />
   </div>
 );
 export default App;

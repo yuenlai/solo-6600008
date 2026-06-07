@@ -11,9 +11,11 @@ const TOOLS: { key: Tool; label: string }[] = [
 const PALETTE = ['#000000','#ffffff','#e53935','#43a047','#1e88e5','#fdd835','#8e24aa','#ff6f00','#00acc1','#795548'];
 
 export const Toolbar: React.FC = () => {
-  const { tool, setTool, color, setColor, zoom, setZoom, clearCanvas, undo, exportPNG, toggleDraftPanel } = useCanvasStore();
+  const { tool, setTool, color, setColor, zoom, setZoom, clearCanvas, undo, exportPNG, toggleDraftPanel, toggleNewCanvasModal } = useCanvasStore();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '12px', background: '#263238', color: '#fff', width: '60px', alignItems: 'center' }}>
+      <button onClick={toggleNewCanvasModal} title="新建画布" style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#7b1fa2', color: '#fff', cursor: 'pointer', fontSize: '18px' }}>➕</button>
+      <div style={{ borderTop: '1px solid #546e7a', width: '100%' }} />
       {TOOLS.map(t => (
         <button key={t.key} onClick={() => setTool(t.key)} title={t.key}
           style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none',

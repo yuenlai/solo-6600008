@@ -16,6 +16,7 @@ interface CanvasState {
   playbackSpeed: number;
   drafts: Draft[];
   draftPanelOpen: boolean;
+  newCanvasModalOpen: boolean;
   setTool: (t: Tool) => void;
   setColor: (c: string) => void;
   setZoom: (z: number) => void;
@@ -45,6 +46,8 @@ interface CanvasState {
   deleteDraft: (id: string) => void;
   loadDrafts: () => void;
   toggleDraftPanel: () => void;
+  toggleNewCanvasModal: () => void;
+  createNewCanvas: (width: number, height: number) => void;
 }
 
 const emptyPixels = (w: number, h: number) => Array.from({ length: h }, () => Array(w).fill('transparent'));
@@ -104,6 +107,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     playbackSpeed: 1,
     drafts: [],
     draftPanelOpen: false,
+    newCanvasModalOpen: false,
     setTool: (tool) => set({ tool }),
     setColor: (color) => set({ color }),
     setZoom: (zoom) => set({ zoom }),
@@ -379,6 +383,24 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     },
     toggleDraftPanel: () => {
       set({ draftPanelOpen: !get().draftPanelOpen });
+    },
+    toggleNewCanvasModal: () => {
+      set({ newCanvasModalOpen: !get().newCanvasModalOpen });
+    },
+    createNewCanvas: (width, height) => {
+      const newLayer = createLayer(width, height, '图层 1');
+      const newLayers = [newLayer];
+      const newFrame = createFrame(newLayers, 200);
+      set({
+        canvas: { width, height },
+        layers: newLayers,
+        frames: [newFrame],
+        currentFrame: 0,
+        currentLayerId: newLayer.id,
+        history: [],
+        historyIndex: -1,
+        newCanvasModalOpen: false,
+      });
     },
   };
 });

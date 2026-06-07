@@ -62,6 +62,10 @@ interface CanvasState {
   setBackgroundMode: (mode: BackgroundMode) => void;
   setColor: (c: string) => void;
   setZoom: (z: number) => void;
+  zoomIn: (fine?: boolean) => void;
+  zoomOut: (fine?: boolean) => void;
+  resetZoom: () => void;
+  getZoomPercentage: () => string;
   setOffset: (x: number, y: number) => void;
   resetOffset: () => void;
   toggleFavoriteColor: (c: string) => void;
@@ -271,6 +275,24 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       set({ color });
     },
     setZoom: (zoom) => set({ zoom }),
+    zoomIn: (fine = false) => {
+      const { zoom } = get();
+      const step = fine ? 1 : 2;
+      const newZoom = Math.min(zoom + step, 64);
+      set({ zoom: newZoom });
+    },
+    zoomOut: (fine = false) => {
+      const { zoom } = get();
+      const step = fine ? 1 : 2;
+      const newZoom = Math.max(zoom - step, 1);
+      set({ zoom: newZoom });
+    },
+    resetZoom: () => set({ zoom: 16 }),
+    getZoomPercentage: () => {
+      const { zoom } = get();
+      const percentage = Math.round((zoom / 16) * 100);
+      return `${percentage}%`;
+    },
     toggleFavoriteColor: (color) => {
       const { favoriteColors } = get();
       if (favoriteColors.includes(color)) {

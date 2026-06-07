@@ -48,7 +48,7 @@ interface HoverState {
 }
 
 export const Toolbar: React.FC = () => {
-  const { tool, setTool, color, setColor, zoom, setZoom, clearCanvas, undo, redo, canUndo, canRedo, exportPNG, exportMultiSizePNG, toggleDraftPanel, toggleNewCanvasModal, toggleResizeCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode } = useCanvasStore();
+  const { tool, setTool, color, setColor, zoom, setZoom, zoomIn, zoomOut, resetZoom, getZoomPercentage, clearCanvas, undo, redo, canUndo, canRedo, exportPNG, exportMultiSizePNG, toggleDraftPanel, toggleNewCanvasModal, toggleResizeCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode } = useCanvasStore();
   const [hover, setHover] = useState<HoverState | null>(null);
 
   const currentTool = TOOLS.find(t => t.key === tool);
@@ -171,10 +171,58 @@ export const Toolbar: React.FC = () => {
           ))}
         </div>
       </div>
-      <div style={{ borderTop: '1px solid #455a64', width: '85%', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-        <button onClick={() => setZoom(Math.min(zoom + 4, 40))} style={{ width: '40px', height: '30px', borderRadius: '6px', border: 'none', background: '#37474f', color: '#fff', cursor: 'pointer', fontSize: '14px', transition: 'all 0.2s' }}>+</button>
-        <span style={{ fontSize: '11px', color: '#90a4ae', fontWeight: 500 }}>{zoom}px</span>
-        <button onClick={() => setZoom(Math.max(zoom - 4, 4))} style={{ width: '40px', height: '30px', borderRadius: '6px', border: 'none', background: '#37474f', color: '#fff', cursor: 'pointer', fontSize: '14px', transition: 'all 0.2s' }}>-</button>
+      <div style={{ borderTop: '1px solid #455a64', width: '85%', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+        <div style={{ fontSize: '10px', color: '#90a4ae', fontWeight: 500 }}>缩放</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%', justifyContent: 'center' }}>
+          <button 
+            onClick={() => zoomOut()} 
+            onContextMenu={(e) => { e.preventDefault(); zoomOut(true); }}
+            title="缩小 (右键细粒度)"
+            style={{ width: '28px', height: '28px', borderRadius: '6px', border: 'none', background: '#37474f', color: '#fff', cursor: 'pointer', fontSize: '14px', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >−</button>
+          <div 
+            onClick={resetZoom}
+            title="重置缩放"
+            style={{ 
+              minWidth: '50px', 
+              textAlign: 'center', 
+              cursor: 'pointer',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              background: 'rgba(100, 181, 246, 0.1)',
+              border: '1px solid rgba(100, 181, 246, 0.3)',
+              transition: 'all 0.2s',
+            }}
+          >
+            <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#64b5f6', lineHeight: 1.2 }}>{getZoomPercentage()}</div>
+            <div style={{ fontSize: '9px', color: '#78909c' }}>{zoom}px</div>
+          </div>
+          <button 
+            onClick={() => zoomIn()} 
+            onContextMenu={(e) => { e.preventDefault(); zoomIn(true); }}
+            title="放大 (右键细粒度)"
+            style={{ width: '28px', height: '28px', borderRadius: '6px', border: 'none', background: '#37474f', color: '#fff', cursor: 'pointer', fontSize: '14px', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >+</button>
+        </div>
+        <input 
+          type="range" 
+          min="1" 
+          max="64" 
+          step="1"
+          value={zoom} 
+          onChange={(e) => setZoom(parseInt(e.target.value))}
+          style={{ 
+            width: '90%', 
+            height: '4px', 
+            cursor: 'pointer',
+            accentColor: '#64b5f6',
+          }} 
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', width: '90%', fontSize: '9px', color: '#546e7a' }}>
+          <span>6%</span>
+          <span>100%</span>
+          <span>400%</span>
+        </div>
       </div>
       <div style={{ display: 'flex', gap: '4px' }}>
         <button

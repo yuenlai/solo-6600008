@@ -39,6 +39,7 @@ export const PixelGrid: React.FC = () => {
     backgroundMode,
     undo,
     redo,
+    getZoomPercentage,
   } = useCanvasStore();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -52,6 +53,8 @@ export const PixelGrid: React.FC = () => {
   const [panStart, setPanStart] = useState<[number, number]>([0, 0]);
   const [panOffsetStart, setPanOffsetStart] = useState<[number, number]>([0, 0]);
   const [spacePressed, setSpacePressed] = useState(false);
+  const [showZoomIndicator, setShowZoomIndicator] = useState(false);
+  const [zoomIndicatorTimeout, setZoomIndicatorTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   const isPointInSelection = useCallback(
     (x: number, y: number) => {
@@ -377,9 +380,19 @@ export const PixelGrid: React.FC = () => {
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -4 : 4;
-    const newZoom = Math.max(4, Math.min(40, zoom + delta));
-    useCanvasStore.getState().setZoom(newZoom);
+    const state = useCanvasStore.getState();
+    const isFine = e.shiftKey;
+    const step = isFine ? 1 : 2;
+    const delta = e.deltaY > 0 ? -step : step;
+    const newZoom = Math.max(1, Math.min(64, state.zoom + delta));
+    state.setZoom(newZoom);
+    
+    setShowZoomIndicator(true);
+    if (zoomIndicatorTimeout) {
+      clearTimeout(zoomIndicatorTimeout);
+    }
+    const timeout = setTimeout(() => setShowZoomIndicator(false), 800);
+    setZoomIndicatorTimeout(timeout);
   };
 
   const getCursor = () => {
@@ -415,6 +428,46 @@ export const PixelGrid: React.FC = () => {
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
       />
+      {showZoomIndicator && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(0, 0, 0, 0.75)',
+            color: '#fff',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            fontSize: '18px',
+            fontWeight: 'bold',
+            pointerEvents: 'none',
+            zIndex: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '4px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            animation: 'zoomIndicatorFade 0.2s ease-out',
+          }}
+        >
+          <div style={{ fontSize: '24px', color: '#64b5f6' }}>{getZoomPercentage()}</div>
+          <div style={{ fontSize: '12px', color: '#90a4ae' }}>{zoom}px / 像素</div>
+        </div>
+      )}
+      <style>{`
+        @keyframes zoomIndicatorFade {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };

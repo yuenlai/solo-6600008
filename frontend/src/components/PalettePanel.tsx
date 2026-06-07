@@ -7,6 +7,7 @@ export const PalettePanel: React.FC = () => {
     color,
     setColor,
     favoriteColors,
+    recentColors,
     toggleFavoriteColor,
     activePaletteName,
     setActivePaletteName,
@@ -60,6 +61,36 @@ export const PalettePanel: React.FC = () => {
                     position: 'relative',
                   }}
                   title={`${c} (右键取消收藏)`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {recentColors.length > 0 && (
+          <div style={{ padding: '12px', borderBottom: '1px solid #37474f' }}>
+            <div style={{ fontSize: '12px', marginBottom: '8px', color: '#90caf9' }}>
+              🕐 最近使用
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {recentColors.map((c) => (
+                <div
+                  key={c}
+                  onClick={() => setColor(c)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    toggleFavoriteColor(c);
+                  }}
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '4px',
+                    background: c,
+                    border: color === c ? '2px solid #fff' : '2px solid #546e7a',
+                    cursor: 'pointer',
+                    position: 'relative',
+                  }}
+                  title={`${c}${favoriteColors.includes(c) ? ' (已收藏)' : ''}\n点击使用 | 右键收藏`}
                 />
               ))}
             </div>

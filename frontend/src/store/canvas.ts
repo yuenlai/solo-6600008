@@ -28,11 +28,13 @@ interface CanvasState {
   selectionPixels: string[][] | null;
   mirrorMode: MirrorMode;
   favoriteColors: string[];
+  recentColors: string[];
   activePaletteName: string | null;
   setTool: (t: Tool) => void;
   setColor: (c: string) => void;
   setZoom: (z: number) => void;
   toggleFavoriteColor: (c: string) => void;
+  addRecentColor: (c: string) => void;
   setActivePaletteName: (name: string | null) => void;
   setPixel: (x: number, y: number) => void;
   clearCanvas: () => void;
@@ -134,9 +136,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     selectionPixels: null,
     mirrorMode: 'none',
     favoriteColors: [],
+    recentColors: [],
     activePaletteName: null,
     setTool: (tool) => set({ tool, selection: null, selectionPixels: null }),
-    setColor: (color) => set({ color }),
+    setColor: (color) => {
+      get().addRecentColor(color);
+      set({ color });
+    },
     setZoom: (zoom) => set({ zoom }),
     toggleFavoriteColor: (color) => {
       const { favoriteColors } = get();
@@ -145,6 +151,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       } else {
         set({ favoriteColors: [...favoriteColors, color] });
       }
+    },
+    addRecentColor: (color) => {
+      const { recentColors } = get();
+      const filtered = recentColors.filter(c => c !== color);
+      const updated = [color, ...filtered].slice(0, 12);
+      set({ recentColors: updated });
     },
     setActivePaletteName: (name) => set({ activePaletteName: name }),
     setPixel: (x, y) => {

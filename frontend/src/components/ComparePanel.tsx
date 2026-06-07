@@ -1,25 +1,37 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useCanvasStore } from '../store/canvas';
+import { Draft } from '../types';
 
 export const ComparePanel: React.FC = () => {
-  const comparePanelOpen = useCanvasStore((state) => state.comparePanelOpen);
-  const compareDraft = useCanvasStore((state) => state.compareDraft);
-  const toggleComparePanel = useCanvasStore((state) => state.toggleComparePanel);
-  const setCompareDraft = useCanvasStore((state) => state.setCompareDraft);
-  const layers = useCanvasStore((state) => state.layers);
-  const frames = useCanvasStore((state) => state.frames);
-  const currentFrame = useCanvasStore((state) => state.currentFrame);
-  const canvas = useCanvasStore((state) => state.canvas);
-  const getCompositePixelsFromDraft = useCanvasStore((state) => state.getCompositePixelsFromDraft);
-  const getPixelDifferences = useCanvasStore((state) => state.getPixelDifferences);
-
+  const [, forceUpdate] = useState(0);
   const currentCanvasRef = useRef<HTMLCanvasElement>(null);
   const draftCanvasRef = useRef<HTMLCanvasElement>(null);
   const diffCanvasRef = useRef<HTMLCanvasElement>(null);
   const [showDiff, setShowDiff] = useState(true);
   const [diffMode, setDiffMode] = useState<'side' | 'diff'>('side');
 
-  const currentPixels = useMemo(() => {
+  const comparePanelOpen = useCanvasStore((s) => s.comparePanelOpen);
+  const compareDraft = useCanvasStore((s) => s.compareDraft);
+  const toggleComparePanel = useCanvasStore((s) => s.toggleComparePanel);
+  const setCompareDraft = useCanvasStore((s) => s.setCompareDraft);
+  const getCompositePixelsFromDraft = useCanvasStore((s) => s.getCompositePixelsFromDraft);
+  const getPixelDifferences = useCanvasStore((s) => s.getPixelDifferences);
+
+  useEffect(() => {
+    if (!comparePanelOpen) return;
+
+    const unsubscribe = useCanvasStore.subscribe(
+      (state) => {
+        forceUpdate((n) => n + 1);
+      }
+    );
+
+    return unsubscribe;
+  }, [comparePanelOpen]);
+
+  const getCurrentPixels = useCallback((): string[][] => {
+    const state = useCanvasStore.getState();
+    const { canvas, frames, currentFrame, layers } = state;
     const composite: string[][] = [];
     const height = canvas.height;
     const width = canvas.width;
@@ -42,21 +54,22 @@ export const ComparePanel: React.FC = () => {
       }
     }
     return composite;
-  }, [layers, frames, currentFrame, canvas]);
+  }, []);
 
-  const draftPixels = useMemo(() => {
-    if (!compareDraft) return [];
-    return getCompositePixelsFromDraft(compareDraft);
-  }, [compareDraft, getCompositePixelsFromDraft]);
+  const getDraftPixels = useCallback((draft: Draft): string[][] => {
+    return getCompositePixelsFromDraft(draft);
+  }, [getCompositePixelsFromDraft]);
 
-  const differences = useMemo(() => {
-    if (!currentPixels.length || !draftPixels.length) return [];
-    return getPixelDifferences(currentPixels, draftPixels);
-  }, [currentPixels, draftPixels, getPixelDifferences]);
+  const getDifferences = useCallback((p1: string[][], p2: string[][]): boolean[][] => {
+    return getPixelDifferences(p1, p2);
+  }, [getPixelDifferences]);
 
-  const diffCount = useMemo(() => {
-    return differences.flat().filter(Boolean).length;
-  }, [differences]);
+  const currentPixels = getCurrentPixels();
+  const draftPixels = compareDraft ? getDraftPixels(compareDraft) : [];
+  const differences = currentPixels.length && draftPixels.length
+    ? getDifferences(currentPixels, draftPixels)
+    : [];
+  const diffCount = differences.flat().filter(Boolean).length;
 
   const drawPixels = (
     canvas: HTMLCanvasElement | null,
@@ -90,8 +103,8 @@ export const ComparePanel: React.FC = () => {
 
         if (highlightDiff && diffMap?.[y]?.[x]) {
           ctx.strokeStyle = '#ff4444';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(x * pixelSize + 0.5, y * pixelSize + 0.5, pixelSize - 1, pixelSize - 1);
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x * pixelSize + 1, y * pixelSize + 1, pixelSize - 2, pixelSize - 2);
         }
       }
     }
@@ -141,6 +154,7 @@ export const ComparePanel: React.FC = () => {
 
   useEffect(() => {
     if (!comparePanelOpen || !compareDraft) return;
+    
     if (diffMode === 'side') {
       drawPixels(currentCanvasRef.current, currentPixels, showDiff, differences);
       drawPixels(draftCanvasRef.current, draftPixels, showDiff, differences);
@@ -257,7 +271,7 @@ export const ComparePanel: React.FC = () => {
               高亮差异
             </label>
           )}
-          <div style={{ marginLeft: 'auto', fontSize: '13px', color: '#ff9800' }}>
+          <div style={{ marginLeft: 'auto', fontSize: '13px', color: '#ff9800', fontWeight: 'bold' }}>
             共 {diffCount} 处差异
           </div>
         </div>

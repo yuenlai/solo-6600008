@@ -81,6 +81,7 @@ interface CanvasState {
   nextFrame: () => void;
   prevFrame: () => void;
   exportPNG: (scale?: number) => void;
+  exportMultiSizePNG: (scales?: number[]) => void;
   generateThumbnail: () => string;
   saveDraft: (name: string) => void;
   loadDraft: (id: string) => void;
@@ -492,9 +493,37 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         }
       }
       const link = document.createElement('a');
-      link.download = `pixel-art-${width}x${height}-${Date.now()}.png`;
+      link.download = `pixel-art-${width}x${height}-${scale}x-${Date.now()}.png`;
       link.href = exportCanvas.toDataURL('image/png');
       link.click();
+    },
+    exportMultiSizePNG: (scales = [1, 2, 4]) => {
+      const compositePixels = get().getCompositePixels();
+      const height = compositePixels.length;
+      const width = compositePixels[0]?.length || 0;
+      const timestamp = Date.now();
+      
+      for (const scale of scales) {
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = width * scale;
+        exportCanvas.height = height * scale;
+        const ctx = exportCanvas.getContext('2d');
+        if (!ctx) continue;
+        ctx.imageSmoothingEnabled = false;
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const color = compositePixels[y][x];
+            if (color !== 'transparent') {
+              ctx.fillStyle = color;
+              ctx.fillRect(x * scale, y * scale, scale, scale);
+            }
+          }
+        }
+        const link = document.createElement('a');
+        link.download = `pixel-art-${width}x${height}-${scale}x-${timestamp}.png`;
+        link.href = exportCanvas.toDataURL('image/png');
+        link.click();
+      }
     },
     generateThumbnail: () => {
       const compositePixels = get().getCompositePixels();

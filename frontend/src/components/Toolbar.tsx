@@ -29,7 +29,7 @@ const BACKGROUND_MODES: { key: BackgroundMode; label: string; title: string; col
 ];
 
 export const Toolbar: React.FC = () => {
-  const { tool, setTool, color, setColor, zoom, setZoom, clearCanvas, undo, exportPNG, toggleDraftPanel, toggleNewCanvasModal, toggleResizeCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode } = useCanvasStore();
+  const { tool, setTool, color, setColor, zoom, setZoom, clearCanvas, undo, exportPNG, exportMultiSizePNG, toggleDraftPanel, toggleNewCanvasModal, toggleResizeCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode } = useCanvasStore();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '12px', background: '#263238', color: '#fff', width: '60px', alignItems: 'center' }}>
       <button onClick={toggleNewCanvasModal} title="新建画布" style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#7b1fa2', color: '#fff', cursor: 'pointer', fontSize: '18px' }}>➕</button>
@@ -79,8 +79,10 @@ export const Toolbar: React.FC = () => {
       <button onClick={undo} style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#37474f', cursor: 'pointer', fontSize: '14px' }}>↩️</button>
       <button onClick={clearCanvas} style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#b71c1c', color: '#fff', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>
       <div style={{ borderTop: '1px solid #546e7a', width: '100%', paddingTop: '8px' }}>
-        <button onClick={() => exportPNG(1)} title="导出 PNG (1:1)" style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#1565c0', color: '#fff', cursor: 'pointer', fontSize: '18px', marginBottom: '4px' }}>💾</button>
-        <button onClick={() => exportPNG(4)} title="导出 PNG (4x)" style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#2e7d32', color: '#fff', cursor: 'pointer', fontSize: '12px', marginBottom: '4px' }}>4x</button>
+        <button onClick={() => exportPNG(1)} title="导出 PNG (1x)" style={{ width: '40px', height: '32px', borderRadius: '6px', border: 'none', background: '#1565c0', color: '#fff', cursor: 'pointer', fontSize: '12px', marginBottom: '4px' }}>1x</button>
+        <button onClick={() => exportPNG(2)} title="导出 PNG (2x)" style={{ width: '40px', height: '32px', borderRadius: '6px', border: 'none', background: '#1976d2', color: '#fff', cursor: 'pointer', fontSize: '12px', marginBottom: '4px' }}>2x</button>
+        <button onClick={() => exportPNG(4)} title="导出 PNG (4x)" style={{ width: '40px', height: '32px', borderRadius: '6px', border: 'none', background: '#1e88e5', color: '#fff', cursor: 'pointer', fontSize: '12px', marginBottom: '4px' }}>4x</button>
+        <button onClick={() => exportMultiSizePNG()} title="批量导出 (1x+2x+4x)" style={{ width: '40px', height: '36px', borderRadius: '6px', border: 'none', background: '#2e7d32', color: '#fff', cursor: 'pointer', fontSize: '11px', marginBottom: '4px', fontWeight: 'bold' }}>全部</button>
         <button onClick={toggleDraftPanel} title="本地草稿箱" style={{ width: '40px', height: '40px', borderRadius: '8px', border: 'none', background: '#ff8f00', color: '#fff', cursor: 'pointer', fontSize: '18px' }}>📁</button>
       </div>
     </div>

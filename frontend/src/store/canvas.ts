@@ -85,6 +85,8 @@ interface CanvasState {
   setOnionSkinNextFrames: (count: number) => void;
   setOnionSkinOpacity: (opacity: number) => void;
   getOnionSkinFrames: () => { pixels: string[][]; opacity: number; isPrev: boolean }[];
+  drawRect: (x: number, y: number, width: number, height: number, fill?: boolean) => void;
+  drawLine: (x1: number, y1: number, x2: number, y2: number) => void;
 }
 
 const emptyPixels = (w: number, h: number) => Array.from({ length: h }, () => Array(w).fill('transparent'));
@@ -656,6 +658,80 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       }
 
       return result;
+    },
+    drawRect: (x, y, width, height, fill = false) => {
+      const { canvas, color, layers, currentLayerId, currentFrame, frames } = get();
+      const newLayers = layers.map(layer => {
+        if (layer.id !== currentLayerId) return layer;
+        const pixels = layer.pixels.map(r => [...r]);
+
+        if (fill) {
+          for (let py = y; py < y + height; py++) {
+            for (let px = x; px < x + width; px++) {
+              if (px >= 0 && px < canvas.width && py >= 0 && py < canvas.height) {
+                pixels[py][px] = color;
+              }
+            }
+          }
+        } else {
+          for (let px = x; px < x + width; px++) {
+            if (px >= 0 && px < canvas.width) {
+              if (y >= 0 && y < canvas.height) pixels[y][px] = color;
+              const y2 = y + height - 1;
+              if (y2 >= 0 && y2 < canvas.height) pixels[y2][px] = color;
+            }
+          }
+          for (let py = y + 1; py < y + height - 1; py++) {
+            if (py >= 0 && py < canvas.height) {
+              if (x >= 0 && x < canvas.width) pixels[py][x] = color;
+              const x2 = x + width - 1;
+              if (x2 >= 0 && x2 < canvas.width) pixels[py][x2] = color;
+            }
+          }
+        }
+        return { ...layer, pixels };
+      });
+      const newFrames = frames.map((f, i) =>
+        i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
+      );
+      set({ layers: newLayers, frames: newFrames, history: [...get().history.slice(0, get().historyIndex + 1), get().getCompositePixels()], historyIndex: get().historyIndex + 1 });
+    },
+    drawLine: (x1, y1, x2, y2) => {
+      const { canvas, color, layers, currentLayerId, currentFrame, frames } = get();
+      const newLayers = layers.map(layer => {
+        if (layer.id !== currentLayerId) return layer;
+        const pixels = layer.pixels.map(r => [...r]);
+
+        const dx = Math.abs(x2 - x1);
+        const dy = Math.abs(y2 - y1);
+        const sx = x1 < x2 ? 1 : -1;
+        const sy = y1 < y2 ? 1 : -1;
+        let err = dx - dy;
+
+        let x = x1;
+        let y = y1;
+
+        while (true) {
+          if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
+            pixels[y][x] = color;
+          }
+          if (x === x2 && y === y2) break;
+          const e2 = 2 * err;
+          if (e2 > -dy) {
+            err -= dy;
+            x += sx;
+          }
+          if (e2 < dx) {
+            err += dx;
+            y += sy;
+          }
+        }
+        return { ...layer, pixels };
+      });
+      const newFrames = frames.map((f, i) =>
+        i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
+      );
+      set({ layers: newLayers, frames: newFrames, history: [...get().history.slice(0, get().historyIndex + 1), get().getCompositePixels()], historyIndex: get().historyIndex + 1 });
     },
   };
 });

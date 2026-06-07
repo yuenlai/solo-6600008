@@ -2,6 +2,7 @@ import React from 'react';
 import { PixelGrid } from './components/PixelGrid';
 import { Toolbar } from './components/Toolbar';
 import { LayerPanel } from './components/LayerPanel';
+import { ShapePanel } from './components/ShapePanel';
 import { PalettePanel } from './components/PalettePanel';
 import { AnimationPanel } from './components/AnimationPanel';
 import { DraftPanel } from './components/DraftPanel';
@@ -15,6 +16,7 @@ const App: React.FC = () => (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#37474f', overflow: 'auto' }}>
         <PixelGrid />
       </div>
+      <ShapePanel />
       <LayerPanel />
     </div>
     <AnimationPanel />

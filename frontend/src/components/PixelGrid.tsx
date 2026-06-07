@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import { useCanvasStore } from '../store/canvas';
 
 export const PixelGrid: React.FC = () => {
-  const { canvas, zoom, setPixel, getCompositePixels, layers } = useCanvasStore();
+  const { canvas, zoom, setPixel, getCompositePixels, layers, isPlaying } = useCanvasStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
 
@@ -33,9 +33,9 @@ export const PixelGrid: React.FC = () => {
 
   return (
     <canvas ref={canvasRef} width={canvas.width * zoom} height={canvas.height * zoom}
-      style={{ cursor: 'crosshair', imageRendering: 'pixelated' }}
-      onMouseDown={e => { drawingRef.current = true; const [x, y] = getPixel(e); setPixel(x, y); }}
-      onMouseMove={e => { if (drawingRef.current) { const [x, y] = getPixel(e); setPixel(x, y); } }}
+      style={{ cursor: isPlaying ? 'default' : 'crosshair', imageRendering: 'pixelated', pointerEvents: isPlaying ? 'none' : 'auto' }}
+      onMouseDown={e => { if (!isPlaying) { drawingRef.current = true; const [x, y] = getPixel(e); setPixel(x, y); } }}
+      onMouseMove={e => { if (drawingRef.current && !isPlaying) { const [x, y] = getPixel(e); setPixel(x, y); } }}
       onMouseUp={() => drawingRef.current = false}
       onMouseLeave={() => drawingRef.current = false} />
   );

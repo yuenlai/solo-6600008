@@ -1,11 +1,13 @@
 export type Tool = 'pen' | 'eraser' | 'fill' | 'picker' | 'line' | 'rect';
 
 export interface AnimationFrame {
-  id: string; pixels: string[][]; duration: number;
+  id: string;
+  layers: Layer[];
+  duration: number;
 }
 
 export interface PixelCanvas {
-  width: number; height: number; pixels: string[][];
+  width: number; height: number;
 }
 
 export interface Palette {

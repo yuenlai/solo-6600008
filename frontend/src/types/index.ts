@@ -11,3 +11,10 @@ export interface PixelCanvas {
 export interface Palette {
   name: string; colors: string[];
 }
+
+export interface Layer {
+  id: string;
+  name: string;
+  visible: boolean;
+  pixels: string[][];
+}

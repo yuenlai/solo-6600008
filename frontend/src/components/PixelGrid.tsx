@@ -37,8 +37,6 @@ export const PixelGrid: React.FC = () => {
     color,
     setColor,
     backgroundMode,
-    undo,
-    redo,
     getZoomPercentage,
     pickerFeedback,
     setPickerFeedback,
@@ -379,14 +377,6 @@ export const PixelGrid: React.FC = () => {
         e.preventDefault();
         setSpacePressed(true);
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-        e.preventDefault();
-        redo();
-      }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
@@ -410,7 +400,7 @@ export const PixelGrid: React.FC = () => {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('mouseup', handleWindowMouseUp);
     };
-  }, [spacePressed, isPanning, undo, redo]);
+  }, [spacePressed, isPanning]);
 
   const getPixel = (e: React.MouseEvent): [number, number] => {
     const rect = canvasRef.current!.getBoundingClientRect();

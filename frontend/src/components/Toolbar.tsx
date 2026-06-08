@@ -76,12 +76,15 @@ export const Toolbar: React.FC = () => {
       template: { name: '像素模板', description: '从模板库选择', shortcut: '' },
       undo: { name: '撤销', description: '撤销上一步操作', shortcut: 'Ctrl+Z' },
       redo: { name: '重做', description: '重做已撤销的操作', shortcut: 'Ctrl+Y' },
-      clear: { name: '清空画布', description: '清除当前图层内容', shortcut: '' },
+      clear: { name: '清空画布', description: '清除当前图层内容', shortcut: 'Delete' },
       export1: { name: '导出 PNG (1x)', description: '导出原始尺寸图片', shortcut: '' },
       export2: { name: '导出 PNG (2x)', description: '导出2倍放大图片', shortcut: '' },
       export4: { name: '导出 PNG (4x)', description: '导出4倍放大图片', shortcut: '' },
       exportAll: { name: '批量导出', description: '同时导出1x/2x/4x尺寸', shortcut: '' },
       draft: { name: '本地草稿箱', description: '查看和管理保存的草稿', shortcut: '' },
+      zoomIn: { name: '放大', description: '增大缩放比例', shortcut: '+ / Ctrl+=' },
+      zoomOut: { name: '缩小', description: '减小缩放比例', shortcut: '- / Ctrl+-' },
+      zoomReset: { name: '重置缩放', description: '恢复默认缩放', shortcut: '0 / Ctrl+0' },
     };
     return actionTips[hover.key] || null;
   };
@@ -250,11 +253,15 @@ export const Toolbar: React.FC = () => {
           <button 
             onClick={() => zoomOut()} 
             onContextMenu={(e) => { e.preventDefault(); zoomOut(true); }}
+            onMouseEnter={(e) => setHover({ type: 'action', key: 'zoomOut', x: e.clientX, y: e.clientY })}
+            onMouseLeave={() => setHover(null)}
             title="缩小 (右键细粒度)"
             style={{ width: '28px', height: '28px', borderRadius: '6px', border: 'none', background: '#37474f', color: '#fff', cursor: 'pointer', fontSize: '14px', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >−</button>
           <div 
             onClick={resetZoom}
+            onMouseEnter={(e) => setHover({ type: 'action', key: 'zoomReset', x: e.clientX, y: e.clientY })}
+            onMouseLeave={() => setHover(null)}
             title="重置缩放"
             style={{ 
               minWidth: '50px', 
@@ -273,6 +280,8 @@ export const Toolbar: React.FC = () => {
           <button 
             onClick={() => zoomIn()} 
             onContextMenu={(e) => { e.preventDefault(); zoomIn(true); }}
+            onMouseEnter={(e) => setHover({ type: 'action', key: 'zoomIn', x: e.clientX, y: e.clientY })}
+            onMouseLeave={() => setHover(null)}
             title="放大 (右键细粒度)"
             style={{ width: '28px', height: '28px', borderRadius: '6px', border: 'none', background: '#37474f', color: '#fff', cursor: 'pointer', fontSize: '14px', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >+</button>

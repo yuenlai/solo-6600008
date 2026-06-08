@@ -52,6 +52,7 @@ export const PixelGrid: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const drawingRef = useRef(false);
+  const lastPixelRef = useRef<[number, number] | null>(null);
   const [selectStart, setSelectStart] = useState<[number, number] | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<[number, number]>([0, 0]);
@@ -96,6 +97,15 @@ export const PixelGrid: React.FC = () => {
     }
     return pixels;
   }, []);
+
+  const drawPixelLine = useCallback((fromX: number, fromY: number, toX: number, toY: number) => {
+    const linePixels = getLinePixels(fromX, fromY, toX, toY);
+    for (const [px, py] of linePixels) {
+      if (px >= 0 && px < canvas.width && py >= 0 && py < canvas.height) {
+        setPixel(px, py);
+      }
+    }
+  }, [getLinePixels, canvas.width, canvas.height, setPixel]);
 
   const isPointInSelection = useCallback(
     (x: number, y: number) => {
@@ -386,11 +396,19 @@ export const PixelGrid: React.FC = () => {
         }
       }
     };
+    const handleWindowMouseUp = () => {
+      if (drawingRef.current) {
+        drawingRef.current = false;
+        lastPixelRef.current = null;
+      }
+    };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('mouseup', handleWindowMouseUp);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
     };
   }, [spacePressed, isPanning, undo, redo]);
 
@@ -486,6 +504,7 @@ export const PixelGrid: React.FC = () => {
       applySelection();
     }
     drawingRef.current = true;
+    lastPixelRef.current = [x, y];
     setPixel(x, y);
   };
 
@@ -527,7 +546,15 @@ export const PixelGrid: React.FC = () => {
     }
 
     if (drawingRef.current && !isPlaying) {
-      setPixel(x, y);
+      if (lastPixelRef.current) {
+        const [lx, ly] = lastPixelRef.current;
+        drawPixelLine(lx, ly, x, y);
+      } else {
+        if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
+          setPixel(x, y);
+        }
+      }
+      lastPixelRef.current = [x, y];
     }
   };
 
@@ -568,9 +595,10 @@ export const PixelGrid: React.FC = () => {
       return;
     }
     drawingRef.current = false;
+    lastPixelRef.current = null;
   };
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = (e: React.MouseEvent) => {
     if (isPanning) {
       setIsPanning(false);
       return;
@@ -608,7 +636,17 @@ export const PixelGrid: React.FC = () => {
       setShapeEnd(null);
       return;
     }
+
+    if (drawingRef.current && lastPixelRef.current) {
+      const [rawX, rawY] = getPixel(e);
+      const clampedX = Math.max(0, Math.min(canvas.width - 1, rawX));
+      const clampedY = Math.max(0, Math.min(canvas.height - 1, rawY));
+      const [lx, ly] = lastPixelRef.current;
+      drawPixelLine(lx, ly, clampedX, clampedY);
+    }
+
     drawingRef.current = false;
+    lastPixelRef.current = null;
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -626,6 +664,20 @@ export const PixelGrid: React.FC = () => {
     }
     const timeout = setTimeout(() => setShowZoomIndicator(false), 800);
     setZoomIndicatorTimeout(timeout);
+  };
+
+  const handleMouseEnter = (e: React.MouseEvent) => {
+    if (drawingRef.current && (e.buttons & 1) && !isPlaying) {
+      const [x, y] = getPixel(e);
+      if (lastPixelRef.current) {
+        const [lx, ly] = lastPixelRef.current;
+        drawPixelLine(lx, ly, x, y);
+      }
+      lastPixelRef.current = [x, y];
+    } else {
+      drawingRef.current = false;
+      lastPixelRef.current = null;
+    }
   };
 
   const getCursor = () => {
@@ -660,6 +712,7 @@ export const PixelGrid: React.FC = () => {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
+        onMouseEnter={handleMouseEnter}
       />
       {showZoomIndicator && (
         <div

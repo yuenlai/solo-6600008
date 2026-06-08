@@ -44,6 +44,8 @@ export const PixelGrid: React.FC = () => {
     setPickerFeedback,
     lastTool,
     setTool,
+    drawLine,
+    drawRect,
   } = useCanvasStore();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -59,6 +61,40 @@ export const PixelGrid: React.FC = () => {
   const [spacePressed, setSpacePressed] = useState(false);
   const [showZoomIndicator, setShowZoomIndicator] = useState(false);
   const [zoomIndicatorTimeout, setZoomIndicatorTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [shapeStart, setShapeStart] = useState<[number, number] | null>(null);
+  const [shapeEnd, setShapeEnd] = useState<[number, number] | null>(null);
+
+  const getLinePixels = useCallback((x1: number, y1: number, x2: number, y2: number): [number, number][] => {
+    const pixels: [number, number][] = [];
+    const dx = Math.abs(x2 - x1);
+    const dy = Math.abs(y2 - y1);
+    const sx = x1 < x2 ? 1 : -1;
+    const sy = y1 < y2 ? 1 : -1;
+    let err = dx - dy;
+    let x = x1;
+    let y = y1;
+    while (true) {
+      pixels.push([x, y]);
+      if (x === x2 && y === y2) break;
+      const e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; x += sx; }
+      if (e2 < dx) { err += dx; y += sy; }
+    }
+    return pixels;
+  }, []);
+
+  const getRectOutlinePixels = useCallback((x: number, y: number, w: number, h: number): [number, number][] => {
+    const pixels: [number, number][] = [];
+    for (let px = x; px < x + w; px++) {
+      pixels.push([px, y]);
+      if (h > 1) pixels.push([px, y + h - 1]);
+    }
+    for (let py = y + 1; py < y + h - 1; py++) {
+      pixels.push([x, py]);
+      if (w > 1) pixels.push([x + w - 1, py]);
+    }
+    return pixels;
+  }, []);
 
   const isPointInSelection = useCallback(
     (x: number, y: number) => {
@@ -160,6 +196,46 @@ export const PixelGrid: React.FC = () => {
       }
     }
 
+    if (shapeStart && shapeEnd && (tool === 'line' || tool === 'rect')) {
+      const [x1, y1] = shapeStart;
+      const [x2, y2] = shapeEnd;
+      let previewPixels: [number, number][];
+      if (tool === 'line') {
+        previewPixels = getLinePixels(x1, y1, x2, y2);
+      } else {
+        const rx = Math.min(x1, x2);
+        const ry = Math.min(y1, y2);
+        const rw = Math.abs(x2 - x1) + 1;
+        const rh = Math.abs(y2 - y1) + 1;
+        previewPixels = getRectOutlinePixels(rx, ry, rw, rh);
+      }
+      const checkerSize = Math.max(1, Math.floor(pixelSize / 2));
+      for (const [px, py] of previewPixels) {
+        if (px >= 0 && px < canvas.width && py >= 0 && py < canvas.height) {
+          const px0 = startX + px * pixelSize;
+          const py0 = startY + py * pixelSize;
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.55;
+          ctx.fillRect(px0, py0, pixelSize, pixelSize);
+          ctx.globalAlpha = 1;
+          for (let cy = 0; cy < pixelSize; cy += checkerSize) {
+            for (let cx = 0; cx < pixelSize; cx += checkerSize) {
+              const isLight = (Math.floor(cx / checkerSize) + Math.floor(cy / checkerSize)) % 2 === 0;
+              if (!isLight) {
+                ctx.fillStyle = '#fff';
+                ctx.globalAlpha = 0.25;
+                ctx.fillRect(px0 + cx, py0 + cy, Math.min(checkerSize, pixelSize - cx), Math.min(checkerSize, pixelSize - cy));
+              }
+            }
+          }
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(px0 + 0.5, py0 + 0.5, pixelSize - 1, pixelSize - 1);
+        }
+      }
+    }
+
     ctx.strokeStyle = '#ddd';
     ctx.lineWidth = 0.5;
     for (let x = 0; x <= canvas.width; x++) {
@@ -195,7 +271,7 @@ export const PixelGrid: React.FC = () => {
         activeSelection.height * pixelSize
       );
     }
-  }, [canvas, zoom, getCompositePixels, layers, selection, selectionPixels, tempSelection, tool, isDragging, onionSkin, getOnionSkinFrames, isPlaying, offsetX, offsetY, backgroundMode]);
+  }, [canvas, zoom, getCompositePixels, layers, selection, selectionPixels, tempSelection, tool, isDragging, onionSkin, getOnionSkinFrames, isPlaying, offsetX, offsetY, backgroundMode, shapeStart, shapeEnd, color, getLinePixels, getRectOutlinePixels]);
 
   useEffect(() => {
     resizeCanvas();
@@ -317,6 +393,15 @@ export const PixelGrid: React.FC = () => {
       return;
     }
 
+    if (tool === 'line' || tool === 'rect') {
+      if (selection) {
+        applySelection();
+      }
+      setShapeStart([x, y]);
+      setShapeEnd([x, y]);
+      return;
+    }
+
     if (selection) {
       applySelection();
     }
@@ -356,6 +441,11 @@ export const PixelGrid: React.FC = () => {
       return;
     }
 
+    if (shapeStart && (tool === 'line' || tool === 'rect')) {
+      setShapeEnd([x, y]);
+      return;
+    }
+
     if (drawingRef.current && !isPlaying) {
       setPixel(x, y);
     }
@@ -380,6 +470,23 @@ export const PixelGrid: React.FC = () => {
       }
       return;
     }
+
+    if (shapeStart && shapeEnd && (tool === 'line' || tool === 'rect')) {
+      const [x1, y1] = shapeStart;
+      const [x2, y2] = shapeEnd;
+      if (tool === 'line') {
+        drawLine(x1, y1, x2, y2);
+      } else {
+        const rx = Math.min(x1, x2);
+        const ry = Math.min(y1, y2);
+        const rw = Math.abs(x2 - x1) + 1;
+        const rh = Math.abs(y2 - y1) + 1;
+        drawRect(rx, ry, rw, rh, false);
+      }
+      setShapeStart(null);
+      setShapeEnd(null);
+      return;
+    }
     drawingRef.current = false;
   };
 
@@ -400,6 +507,25 @@ export const PixelGrid: React.FC = () => {
         commitSelectionMove();
         setIsDragging(false);
       }
+      return;
+    }
+
+    if (shapeStart) {
+      if (shapeEnd && (tool === 'line' || tool === 'rect')) {
+        const [x1, y1] = shapeStart;
+        const [x2, y2] = shapeEnd;
+        if (tool === 'line') {
+          drawLine(x1, y1, x2, y2);
+        } else {
+          const rx = Math.min(x1, x2);
+          const ry = Math.min(y1, y2);
+          const rw = Math.abs(x2 - x1) + 1;
+          const rh = Math.abs(y2 - y1) + 1;
+          drawRect(rx, ry, rw, rh, false);
+        }
+      }
+      setShapeStart(null);
+      setShapeEnd(null);
       return;
     }
     drawingRef.current = false;

@@ -31,7 +31,7 @@ const MIRROR_MODES: { key: MirrorMode; label: string; title: string; description
 const PALETTE = ['#000000','#ffffff','#e53935','#43a047','#1e88e5','#fdd835','#8e24aa','#ff6f00','#00acc1','#795548'];
 
 const BACKGROUND_MODES: { key: BackgroundMode; label: string; title: string; color: string | [string, string] }[] = [
-  { key: 'checkerboard', label: '▦', title: '棋盘格', color: ['#f0f0f0', '#e0e0e0'] },
+  { key: 'checkerboard', label: '▦', title: '棋盘格', color: ['#ffffff', '#c0c0c0'] },
   { key: 'white', label: '⬜', title: '白色', color: '#ffffff' },
   { key: 'black', label: '⬛', title: '黑色', color: '#000000' },
   { key: 'gray', label: '🔲', title: '灰色', color: '#888888' },

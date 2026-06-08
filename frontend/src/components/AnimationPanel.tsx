@@ -15,7 +15,7 @@ const FrameThumbnail: React.FC<{ frameIndex: number; small?: boolean }> = ({ fra
     for (let y = 0; y < canvas.height; y++) {
       for (let x = 0; x < canvas.width; x++) {
         const c = compositePixels[y][x];
-        ctx.fillStyle = c === 'transparent' ? (x + y) % 2 === 0 ? '#f0f0f0' : '#e0e0e0' : c;
+        ctx.fillStyle = c === 'transparent' ? (x + y) % 2 === 0 ? '#ffffff' : '#c0c0c0' : c;
         ctx.fillRect(x * thumbSize, y * thumbSize, thumbSize, thumbSize);
       }
     }

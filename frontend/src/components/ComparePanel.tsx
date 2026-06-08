@@ -97,7 +97,7 @@ export const ComparePanel: React.FC = () => {
           ctx.fillStyle = color;
           ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
         } else {
-          ctx.fillStyle = (x + y) % 2 === 0 ? '#f0f0f0' : '#e0e0e0';
+          ctx.fillStyle = (x + y) % 2 === 0 ? '#ffffff' : '#c0c0c0';
           ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
         }
 
@@ -145,7 +145,7 @@ export const ComparePanel: React.FC = () => {
           }
           ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
         } else {
-          ctx.fillStyle = (x + y) % 2 === 0 ? '#f5f5f5' : '#eeeeee';
+          ctx.fillStyle = (x + y) % 2 === 0 ? '#ffffff' : '#c0c0c0';
           ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
         }
       }

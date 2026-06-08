@@ -3,7 +3,7 @@ import { useCanvasStore } from '../store/canvas';
 import { BackgroundMode } from '../types';
 
 const BACKGROUND_COLORS: Record<BackgroundMode, string | [string, string]> = {
-  checkerboard: ['#f0f0f0', '#e0e0e0'],
+  checkerboard: ['#ffffff', '#c0c0c0'],
   white: '#ffffff',
   black: '#000000',
   gray: '#888888',

@@ -122,6 +122,8 @@ interface CanvasState {
   setOnionSkinNextFrames: (count: number) => void;
   setOnionSkinOpacity: (opacity: number) => void;
   getOnionSkinFrames: () => { pixels: string[][]; opacity: number; isPrev: boolean }[];
+  rectFill: boolean;
+  setRectFill: (fill: boolean) => void;
   drawRect: (x: number, y: number, width: number, height: number, fill?: boolean) => void;
   drawLine: (x1: number, y1: number, x2: number, y2: number) => void;
   addOutline: (strokeColor: string, thickness?: number) => void;
@@ -245,6 +247,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     lastTool: 'pen',
     pickerFeedback: null,
     colorChangedAt: 0,
+    rectFill: false,
     setTool: (tool) => {
       set((state) => {
         const updates: any = { tool, selection: null, selectionPixels: null };
@@ -973,6 +976,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
 
       return result;
     },
+    setRectFill: (fill) => set({ rectFill: fill }),
     drawRect: (x, y, width, height, fill = false) => {
       const { canvas, color, layers, currentLayerId, currentFrame, frames } = get();
       const newLayers = layers.map(layer => {

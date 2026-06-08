@@ -46,6 +46,7 @@ export const PixelGrid: React.FC = () => {
     setTool,
     drawLine,
     drawRect,
+    rectFill,
   } = useCanvasStore();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -200,6 +201,7 @@ export const PixelGrid: React.FC = () => {
       const [x1, y1] = shapeStart;
       const [x2, y2] = shapeEnd;
       let previewPixels: [number, number][];
+      let fillPixels: [number, number][] = [];
       if (tool === 'line') {
         previewPixels = getLinePixels(x1, y1, x2, y2);
       } else {
@@ -208,8 +210,25 @@ export const PixelGrid: React.FC = () => {
         const rw = Math.abs(x2 - x1) + 1;
         const rh = Math.abs(y2 - y1) + 1;
         previewPixels = getRectOutlinePixels(rx, ry, rw, rh);
+        if (rectFill && rw > 2 && rh > 2) {
+          for (let py = ry + 1; py < ry + rh - 1; py++) {
+            for (let px = rx + 1; px < rx + rw - 1; px++) {
+              fillPixels.push([px, py]);
+            }
+          }
+        }
       }
       const checkerSize = Math.max(1, Math.floor(pixelSize / 2));
+      for (const [px, py] of fillPixels) {
+        if (px >= 0 && px < canvas.width && py >= 0 && py < canvas.height) {
+          const px0 = startX + px * pixelSize;
+          const py0 = startY + py * pixelSize;
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.3;
+          ctx.fillRect(px0, py0, pixelSize, pixelSize);
+          ctx.globalAlpha = 1;
+        }
+      }
       for (const [px, py] of previewPixels) {
         if (px >= 0 && px < canvas.width && py >= 0 && py < canvas.height) {
           const px0 = startX + px * pixelSize;
@@ -233,6 +252,67 @@ export const PixelGrid: React.FC = () => {
           ctx.lineWidth = 1;
           ctx.strokeRect(px0 + 0.5, py0 + 0.5, pixelSize - 1, pixelSize - 1);
         }
+      }
+
+      if (tool === 'rect') {
+        const rx = Math.min(x1, x2);
+        const ry = Math.min(y1, y2);
+        const rw = Math.abs(x2 - x1) + 1;
+        const rh = Math.abs(y2 - y1) + 1;
+        const bx = startX + rx * pixelSize;
+        const by = startY + ry * pixelSize;
+        const bw = rw * pixelSize;
+        const bh = rh * pixelSize;
+        ctx.strokeStyle = '#2196f3';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(bx, by, bw, bh);
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(33, 150, 243, 0.08)';
+        ctx.fillRect(bx, by, bw, bh);
+
+        const dimText = `${rw}×${rh}`;
+        ctx.font = 'bold 11px monospace';
+        const metrics = ctx.measureText(dimText);
+        const textW = metrics.width + 10;
+        const textH = 18;
+        const textX = bx + bw / 2 - textW / 2;
+        const textY = by > textH + 4 ? by - textH - 4 : by + bh + 4;
+        ctx.fillStyle = 'rgba(33, 150, 243, 0.9)';
+        ctx.beginPath();
+        ctx.roundRect(textX, textY, textW, textH, 3);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(dimText, textX + textW / 2, textY + textH / 2);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+      }
+
+      if (tool === 'line') {
+        const dx = Math.abs(x2 - x1);
+        const dy = Math.abs(y2 - y1);
+        const len = Math.max(dx, dy);
+        const bx = startX + Math.min(x1, x2) * pixelSize;
+        const by = startY + Math.min(y1, y2) * pixelSize;
+        const dimText = `长度:${len}`;
+        ctx.font = 'bold 11px monospace';
+        const metrics = ctx.measureText(dimText);
+        const textW = metrics.width + 10;
+        const textH = 18;
+        const textX = bx + 4;
+        const textY = by > textH + 4 ? by - textH - 4 : by + 4;
+        ctx.fillStyle = 'rgba(33, 150, 243, 0.9)';
+        ctx.beginPath();
+        ctx.roundRect(textX, textY, textW, textH, 3);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(dimText, textX + textW / 2, textY + textH / 2);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
       }
     }
 
@@ -271,7 +351,7 @@ export const PixelGrid: React.FC = () => {
         activeSelection.height * pixelSize
       );
     }
-  }, [canvas, zoom, getCompositePixels, layers, selection, selectionPixels, tempSelection, tool, isDragging, onionSkin, getOnionSkinFrames, isPlaying, offsetX, offsetY, backgroundMode, shapeStart, shapeEnd, color, getLinePixels, getRectOutlinePixels]);
+  }, [canvas, zoom, getCompositePixels, layers, selection, selectionPixels, tempSelection, tool, isDragging, onionSkin, getOnionSkinFrames, isPlaying, offsetX, offsetY, backgroundMode, shapeStart, shapeEnd, color, getLinePixels, getRectOutlinePixels, rectFill]);
 
   useEffect(() => {
     resizeCanvas();
@@ -481,7 +561,7 @@ export const PixelGrid: React.FC = () => {
         const ry = Math.min(y1, y2);
         const rw = Math.abs(x2 - x1) + 1;
         const rh = Math.abs(y2 - y1) + 1;
-        drawRect(rx, ry, rw, rh, false);
+        drawRect(rx, ry, rw, rh, rectFill);
       }
       setShapeStart(null);
       setShapeEnd(null);
@@ -521,7 +601,7 @@ export const PixelGrid: React.FC = () => {
           const ry = Math.min(y1, y2);
           const rw = Math.abs(x2 - x1) + 1;
           const rh = Math.abs(y2 - y1) + 1;
-          drawRect(rx, ry, rw, rh, false);
+          drawRect(rx, ry, rw, rh, rectFill);
         }
       }
       setShapeStart(null);

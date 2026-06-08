@@ -48,7 +48,7 @@ interface HoverState {
 }
 
 export const Toolbar: React.FC = () => {
-  const { tool, setTool, color, setColor, colorChangedAt, zoom, setZoom, zoomIn, zoomOut, resetZoom, getZoomPercentage, clearCanvas, undo, redo, canUndo, canRedo, exportPNG, exportMultiSizePNG, toggleDraftPanel, toggleNewCanvasModal, toggleResizeCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode } = useCanvasStore();
+  const { tool, setTool, color, setColor, colorChangedAt, zoom, setZoom, zoomIn, zoomOut, resetZoom, getZoomPercentage, clearCanvas, undo, redo, canUndo, canRedo, exportPNG, exportMultiSizePNG, toggleDraftPanel, toggleNewCanvasModal, toggleResizeCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode, rectFill, setRectFill } = useCanvasStore();
   const [hover, setHover] = useState<HoverState | null>(null);
   const [colorPulseKey, setColorPulseKey] = useState(0);
 
@@ -137,6 +137,24 @@ export const Toolbar: React.FC = () => {
           }}
         >{t.label}</button>
       ))}
+      {tool === 'rect' && (
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: '2px' }}>
+          <button
+            onClick={() => setRectFill(!rectFill)}
+            title={rectFill ? '当前: 填充矩形 (点击切换为描边)' : '当前: 描边矩形 (点击切换为填充)'}
+            style={{
+              width: '44px', height: '28px', borderRadius: '6px', border: 'none',
+              background: rectFill ? 'linear-gradient(135deg, #43a047 0%, #2e7d32 100%)' : '#37474f',
+              color: '#fff', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold',
+              transition: 'all 0.2s',
+              boxShadow: rectFill ? '0 2px 6px rgba(46, 125, 50, 0.4)' : 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px',
+            }}
+          >
+            {rectFill ? ' fill' : ' stroke'}
+          </button>
+        </div>
+      )}
       <div style={{ borderTop: '1px solid #455a64', width: '85%', paddingTop: '8px' }}>
         <div style={{ fontSize: '10px', marginBottom: '6px', textAlign: 'center', color: '#90a4ae', fontWeight: 500 }}>镜像</div>
         {MIRROR_MODES.map(m => (

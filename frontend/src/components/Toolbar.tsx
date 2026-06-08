@@ -48,7 +48,7 @@ interface HoverState {
 }
 
 export const Toolbar: React.FC = () => {
-  const { tool, setTool, color, setColor, colorChangedAt, zoom, setZoom, zoomIn, zoomOut, resetZoom, getZoomPercentage, clearCanvas, undo, redo, canUndo, canRedo, exportPNG, exportMultiSizePNG, toggleDraftPanel, toggleNewCanvasModal, toggleResizeCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode, rectFill, setRectFill } = useCanvasStore();
+  const { tool, setTool, color, setColor, colorChangedAt, zoom, setZoom, zoomIn, zoomOut, resetZoom, getZoomPercentage, toggleClearCanvasConfirm, undo, redo, canUndo, canRedo, exportPNG, exportMultiSizePNG, toggleDraftPanel, toggleNewCanvasModal, toggleResizeCanvasModal, toggleTemplatePanel, mirrorMode, setMirrorMode, backgroundMode, setBackgroundMode, rectFill, setRectFill } = useCanvasStore();
   const [hover, setHover] = useState<HoverState | null>(null);
   const [colorPulseKey, setColorPulseKey] = useState(0);
 
@@ -314,7 +314,7 @@ export const Toolbar: React.FC = () => {
         >↪️</button>
       </div>
       <button
-        onClick={clearCanvas}
+        onClick={toggleClearCanvasConfirm}
         onMouseEnter={(e) => setHover({ type: 'action', key: 'clear', x: e.clientX, y: e.clientY })}
         onMouseLeave={() => setHover(null)}
         style={{ width: '44px', height: '44px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #c62828 0%, #b71c1c 100%)', color: '#fff', cursor: 'pointer', fontSize: '16px', transition: 'all 0.2s', boxShadow: '0 2px 6px rgba(183, 28, 28, 0.4)' }}

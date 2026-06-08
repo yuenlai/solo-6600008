@@ -10,6 +10,7 @@ import { NewCanvasModal } from './components/NewCanvasModal';
 import { ResizeCanvasModal } from './components/ResizeCanvasModal';
 import { TemplatePanel } from './components/TemplatePanel';
 import { ColorReplaceModal } from './components/ColorReplaceModal';
+import { ClearCanvasConfirmModal } from './components/ClearCanvasConfirmModal';
 import { ComparePanel } from './components/ComparePanel';
 
 const App: React.FC = () => (
@@ -29,6 +30,7 @@ const App: React.FC = () => (
     <ResizeCanvasModal />
     <TemplatePanel />
     <ColorReplaceModal />
+    <ClearCanvasConfirmModal />
     <ComparePanel />
   </div>
 );

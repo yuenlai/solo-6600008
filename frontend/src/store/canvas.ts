@@ -53,6 +53,7 @@ interface CanvasState {
   templatePanelOpen: boolean;
   templates: PixelTemplate[];
   colorReplaceModalOpen: boolean;
+  clearCanvasConfirmOpen: boolean;
   comparePanelOpen: boolean;
   compareDraft: Draft | null;
   lastTool: Tool;
@@ -128,6 +129,8 @@ interface CanvasState {
   drawLine: (x1: number, y1: number, x2: number, y2: number) => void;
   addOutline: (strokeColor: string, thickness?: number) => void;
   toggleColorReplaceModal: () => void;
+  toggleClearCanvasConfirm: () => void;
+  clearAllLayers: () => void;
   getAllUsedColors: () => string[];
   replaceColor: (oldColor: string, newColor: string) => void;
   toggleComparePanel: () => void;
@@ -242,6 +245,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     templatePanelOpen: false,
     templates: [],
     colorReplaceModalOpen: false,
+    clearCanvasConfirmOpen: false,
     comparePanelOpen: false,
     compareDraft: null,
     lastTool: 'pen',
@@ -1101,6 +1105,19 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       pushHistory();
     },
     toggleColorReplaceModal: () => set({ colorReplaceModalOpen: !get().colorReplaceModalOpen }),
+    toggleClearCanvasConfirm: () => set({ clearCanvasConfirmOpen: !get().clearCanvasConfirmOpen }),
+    clearAllLayers: () => {
+      const { layers, currentFrame, frames, canvas } = get();
+      const newLayers = layers.map(layer => ({
+        ...layer,
+        pixels: emptyPixels(canvas.width, canvas.height),
+      }));
+      const newFrames = frames.map((f, i) =>
+        i === currentFrame ? { ...f, layers: deepCloneLayers(newLayers) } : f
+      );
+      set({ layers: newLayers, frames: newFrames, selection: null, selectionPixels: null, clearCanvasConfirmOpen: false });
+      pushHistory();
+    },
     getAllUsedColors: () => {
       const { frames } = get();
       const colorSet = new Set<string>();

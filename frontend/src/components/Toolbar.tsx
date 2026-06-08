@@ -154,7 +154,7 @@ export const Toolbar: React.FC = () => {
         <div style={{ marginBottom: '10px', textAlign: 'center' }}>
           <div style={{ fontSize: '10px', marginBottom: '6px', color: '#90a4ae', fontWeight: 500 }}>当前颜色</div>
           <div
-            key={`current-${colorPulseKey}`}
+            key={`current-${color}-${colorPulseKey}`}
             style={{
               width: '44px',
               height: '44px',
@@ -359,7 +359,7 @@ export const Toolbar: React.FC = () => {
           )}
         </div>
       )}
-      <style>{`
+      <style key={`style-${color}-${colorPulseKey}`}>{`
         @keyframes colorPulse {
           0% {
             transform: scale(1);

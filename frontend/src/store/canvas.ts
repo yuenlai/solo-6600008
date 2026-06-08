@@ -246,11 +246,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     pickerFeedback: null,
     colorChangedAt: 0,
     setTool: (tool) => {
-      const state = get();
-      if (state.tool !== 'picker') {
-        set({ lastTool: state.tool });
-      }
-      set({ tool, selection: null, selectionPixels: null });
+      set((state) => {
+        const updates: any = { tool, selection: null, selectionPixels: null };
+        if (state.tool !== 'picker') {
+          updates.lastTool = state.tool;
+        }
+        return updates;
+      });
     },
     setPickerFeedback: (feedback) => set({ pickerFeedback: feedback }),
     toggleTemplatePanel: () => set({ templatePanelOpen: !get().templatePanelOpen }),
@@ -285,8 +287,15 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     setOffset: (x, y) => set({ offsetX: x, offsetY: y }),
     resetOffset: () => set({ offsetX: 0, offsetY: 0 }),
     setColor: (color) => {
-      get().addRecentColor(color);
-      set({ color, colorChangedAt: Date.now() });
+      set((state) => {
+        const filtered = state.recentColors.filter(c => c !== color);
+        const updatedRecentColors = [color, ...filtered].slice(0, 12);
+        return {
+          color,
+          colorChangedAt: Date.now(),
+          recentColors: updatedRecentColors,
+        };
+      });
     },
     setZoom: (zoom) => set({ zoom }),
     zoomIn: (fine = false) => {

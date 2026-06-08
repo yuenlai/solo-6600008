@@ -270,11 +270,15 @@ export const PixelGrid: React.FC = () => {
         const compositePixels = getCompositePixels();
         const pickedColor = compositePixels[y][x];
         const isTransparent = pickedColor === 'transparent';
-        
+
         const rect = canvasRef.current!.getBoundingClientRect();
         const feedbackX = rect.left + offsetX + x * zoom + zoom / 2;
         const feedbackY = rect.top + offsetY + y * zoom + zoom / 2;
-        
+
+        if (!isTransparent) {
+          useCanvasStore.getState().setColor(pickedColor);
+        }
+
         setPickerFeedback({
           visible: true,
           color: isTransparent ? '#888888' : pickedColor,
@@ -283,17 +287,14 @@ export const PixelGrid: React.FC = () => {
           isTransparent,
         });
         
-        if (!isTransparent) {
-          setColor(pickedColor);
-        }
-        
         setTimeout(() => {
           setPickerFeedback(null);
         }, 1200);
         
         setTimeout(() => {
-          setTool(lastTool);
-        }, 300);
+          const state = useCanvasStore.getState();
+          state.setTool(state.lastTool);
+        }, 500);
       }
       return;
     }

@@ -87,6 +87,7 @@ interface CanvasState {
   setCurrentFrame: (i: number) => void;
   setFrameDuration: (index: number, duration: number) => void;
   moveFrame: (fromIndex: number, toIndex: number) => void;
+  renameFrame: (index: number, name: string) => void;
   resizeCanvas: (w: number, h: number) => void;
   addLayer: () => void;
   setCurrentLayer: (id: string) => void;
@@ -156,8 +157,9 @@ const createLayer = (width: number, height: number, name: string): Layer => ({
   pixels: emptyPixels(width, height),
 });
 
-const createFrame = (layers: Layer[], duration: number = 200): AnimationFrame => ({
+const createFrame = (layers: Layer[], duration: number = 200, name?: string): AnimationFrame => ({
   id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+  name: name || `帧`,
   layers: deepCloneLayers(layers),
   duration,
 });
@@ -167,7 +169,7 @@ const DRAFTS_STORAGE_KEY = 'pixel-editor-drafts';
 export const useCanvasStore = create<CanvasState>((set, get) => {
   const initialLayer = createLayer(32, 32, '图层 1');
   const initialLayers = [initialLayer];
-  const initialFrame = createFrame(initialLayers, 200);
+  const initialFrame = createFrame(initialLayers, 200, '帧 1');
 
   const loadDraftsFromStorage = (): Draft[] => {
     try {
@@ -270,7 +272,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       const newLayer = createLayer(template.width, template.height, '图层 1');
       newLayer.pixels = template.pixels.map(row => [...row]);
       const newLayers = [newLayer];
-      const newFrame = createFrame(newLayers, 200);
+      const newFrame = createFrame(newLayers, 200, '帧 1');
       const newHistoryState: HistoryState = {
         layers: deepCloneLayers(newLayers),
         frames: JSON.parse(JSON.stringify([newFrame])),
@@ -466,7 +468,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       const newLayers = copyCurrent
         ? deepCloneLayers(layers)
         : [createLayer(canvas.width, canvas.height, `图层 1`)];
-      const newFrame = createFrame(newLayers, 200);
+      const frameName = copyCurrent ? `${frames[currentFrame].name} 副本` : `帧 ${frames.length + 1}`;
+      const newFrame = createFrame(newLayers, 200, frameName);
       const newFrames = [...frames, newFrame];
       set({
         frames: newFrames,
@@ -493,7 +496,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     duplicateFrame: (index: number) => {
       const { frames } = get();
       const sourceFrame = frames[index];
-      const newFrame = createFrame(sourceFrame.layers, sourceFrame.duration);
+      const newFrame = createFrame(sourceFrame.layers, sourceFrame.duration, `${sourceFrame.name} 副本`);
       const newFrames = [...frames.slice(0, index + 1), newFrame, ...frames.slice(index + 1)];
       set({ frames: newFrames });
     },
@@ -532,12 +535,19 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
       }
       set({ frames: newFrames, currentFrame: newCurrentFrame });
     },
+    renameFrame: (index, name) => {
+      const { frames } = get();
+      const newFrames = frames.map((f, i) =>
+        i === index ? { ...f, name } : f
+      );
+      set({ frames: newFrames });
+    },
     resizeCanvas: (w, h) => {
       const newLayers = get().layers.map(layer => ({
         ...layer,
         pixels: emptyPixels(w, h),
       }));
-      const newFrames = [createFrame(newLayers, 200)];
+      const newFrames = [createFrame(newLayers, 200, '帧 1')];
       const newHistoryState: HistoryState = {
         layers: deepCloneLayers(newLayers),
         frames: JSON.parse(JSON.stringify(newFrames)),
@@ -805,7 +815,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     createNewCanvas: (width, height) => {
       const newLayer = createLayer(width, height, '图层 1');
       const newLayers = [newLayer];
-      const newFrame = createFrame(newLayers, 200);
+      const newFrame = createFrame(newLayers, 200, '帧 1');
       const newHistoryState: HistoryState = {
         layers: deepCloneLayers(newLayers),
         frames: JSON.parse(JSON.stringify([newFrame])),

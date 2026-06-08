@@ -4,6 +4,7 @@ export type BackgroundMode = 'checkerboard' | 'white' | 'black' | 'gray' | 'dark
 
 export interface AnimationFrame {
   id: string;
+  name: string;
   layers: Layer[];
   duration: number;
 }

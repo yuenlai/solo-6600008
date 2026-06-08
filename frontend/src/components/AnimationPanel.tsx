@@ -1,34 +1,85 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { useCanvasStore } from '../store/canvas';
 
-const FrameThumbnail: React.FC<{ frameIndex: number; small?: boolean }> = ({ frameIndex, small = false }) => {
+const CHECKER_LIGHT = '#e0e0e0';
+const CHECKER_DARK = '#bdbdbd';
+
+const FrameThumbnail: React.FC<{ frameIndex: number; size?: number }> = ({ frameIndex, size = 5 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { frames, canvas, getCompositePixels } = useCanvasStore();
   const frame = frames[frameIndex];
-  const thumbSize = small ? 3 : 4;
 
   useEffect(() => {
     const ctx = canvasRef.current?.getContext('2d');
     if (!ctx || !frame) return;
     const compositePixels = getCompositePixels(frame.layers);
-    ctx.clearRect(0, 0, canvas.width * thumbSize, canvas.height * thumbSize);
+    const w = canvas.width * size;
+    const h = canvas.height * size;
+    ctx.clearRect(0, 0, w, h);
     for (let y = 0; y < canvas.height; y++) {
       for (let x = 0; x < canvas.width; x++) {
         const c = compositePixels[y][x];
-        ctx.fillStyle = c === 'transparent' ? (x + y) % 2 === 0 ? '#ffffff' : '#c0c0c0' : c;
-        ctx.fillRect(x * thumbSize, y * thumbSize, thumbSize, thumbSize);
+        ctx.fillStyle = c === 'transparent'
+          ? ((x + y) % 2 === 0 ? CHECKER_LIGHT : CHECKER_DARK)
+          : c;
+        ctx.fillRect(x * size, y * size, size, size);
       }
     }
-  }, [frame, canvas, getCompositePixels, thumbSize]);
+  }, [frame, canvas, getCompositePixels, size]);
 
   return (
     <canvas
       ref={canvasRef}
-      width={canvas.width * thumbSize}
-      height={canvas.height * thumbSize}
-      style={{ imageRendering: 'pixelated', borderRadius: '2px' }}
+      width={canvas.width * size}
+      height={canvas.height * size}
+      style={{
+        imageRendering: 'pixelated',
+        borderRadius: '3px',
+        display: 'block',
+      }}
     />
   );
+};
+
+interface FrameContentInfo {
+  pixelCount: number;
+  totalPixels: number;
+  dominantColors: string[];
+  layerCount: number;
+  isEmpty: boolean;
+}
+
+const useFrameContentInfo = (frameIndex: number): FrameContentInfo => {
+  const { frames, canvas, getCompositePixels } = useCanvasStore();
+  const frame = frames[frameIndex];
+
+  return useMemo(() => {
+    if (!frame) return { pixelCount: 0, totalPixels: 0, dominantColors: [], layerCount: 0, isEmpty: true };
+    const compositePixels = getCompositePixels(frame.layers);
+    const totalPixels = canvas.width * canvas.height;
+    const colorCount: Record<string, number> = {};
+    let pixelCount = 0;
+    for (const row of compositePixels) {
+      for (const c of row) {
+        if (c !== 'transparent') {
+          pixelCount++;
+          colorCount[c] = (colorCount[c] || 0) + 1;
+        }
+      }
+    }
+    const dominantColors = Object.entries(colorCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([color]) => color);
+    const visibleLayerCount = frame.layers.filter(l => l.visible).length;
+    return {
+      pixelCount,
+      totalPixels,
+      dominantColors,
+      layerCount: visibleLayerCount,
+      isEmpty: pixelCount === 0,
+    };
+  }, [frame, canvas, getCompositePixels]);
 };
 
 const TimelineFrame: React.FC<{
@@ -43,6 +94,7 @@ const TimelineFrame: React.FC<{
   onDrop: (e: React.DragEvent, index: number) => void;
   onClick: () => void;
   onDurationChange: (duration: number) => void;
+  onNameChange: (name: string) => void;
   onDuplicate: () => void;
   onDelete: () => void;
 }> = ({
@@ -57,21 +109,38 @@ const TimelineFrame: React.FC<{
   onDrop,
   onClick,
   onDurationChange,
+  onNameChange,
   onDuplicate,
   onDelete,
 }) => {
   const { frames } = useCanvasStore();
   const frame = frames[index];
+  const contentInfo = useFrameContentInfo(index);
   const [isEditingDuration, setIsEditingDuration] = useState(false);
   const [durationInput, setDurationInput] = useState(frame.duration.toString());
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(frame.name);
+  const [isHovered, setIsHovered] = useState(false);
+  const durationInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isEditingDuration && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+    if (isEditingDuration && durationInputRef.current) {
+      durationInputRef.current.focus();
+      durationInputRef.current.select();
     }
   }, [isEditingDuration]);
+
+  useEffect(() => {
+    if (isEditingName && nameInputRef.current) {
+      nameInputRef.current.focus();
+      nameInputRef.current.select();
+    }
+  }, [isEditingName]);
+
+  useEffect(() => {
+    setNameInput(frame.name);
+  }, [frame.name]);
 
   const handleDurationSubmit = () => {
     const value = parseInt(durationInput);
@@ -81,31 +150,54 @@ const TimelineFrame: React.FC<{
     setIsEditingDuration(false);
   };
 
-  const minWidth = 80;
-  const durationWidth = Math.max(minWidth, (frame.duration / 200) * 80);
+  const handleNameSubmit = () => {
+    if (nameInput.trim()) {
+      onNameChange(nameInput.trim());
+    }
+    setIsEditingName(false);
+  };
+
+  const fillPercent = contentInfo.totalPixels > 0
+    ? Math.round((contentInfo.pixelCount / contentInfo.totalPixels) * 100)
+    : 0;
+
+  const minWidth = 96;
 
   return (
     <div
-      draggable
+      draggable={!isEditingName && !isEditingDuration}
       onDragStart={(e) => onDragStart(e, index)}
       onDragOver={(e) => onDragOver(e, index)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, index)}
       onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: '6px 4px',
-        borderRadius: '6px',
-        cursor: 'grab',
-        background: isActive ? '#37474f' : 'transparent',
-        border: isActive ? '2px solid #4fc3f7' : '2px solid transparent',
-        opacity: isDragging ? 0.5 : 1,
+        padding: '6px 6px 8px',
+        borderRadius: '8px',
+        cursor: isEditingName || isEditingDuration ? 'default' : 'grab',
+        background: isActive
+          ? 'linear-gradient(180deg, #2c3e50 0%, #1a2a3a 100%)'
+          : isHovered
+            ? '#2a353d'
+            : 'transparent',
+        border: isActive
+          ? '2px solid #4fc3f7'
+          : contentInfo.isEmpty
+            ? '2px dashed #455a64'
+            : isHovered
+              ? '2px solid #455a64'
+              : '2px solid transparent',
+        opacity: isDragging ? 0.4 : 1,
         position: 'relative',
-        minWidth: `${durationWidth}px`,
+        minWidth: `${minWidth}px`,
         flexShrink: 0,
-        transition: 'border-color 0.15s, background 0.15s',
+        transition: 'border-color 0.15s, background 0.15s, opacity 0.15s',
+        boxShadow: isActive ? '0 0 12px rgba(79, 195, 247, 0.25)' : 'none',
       }}
     >
       {isDragOver && (
@@ -122,27 +214,159 @@ const TimelineFrame: React.FC<{
           }}
         />
       )}
+
       <div style={{ position: 'relative' }}>
-        <FrameThumbnail frameIndex={index} small />
+        <FrameThumbnail frameIndex={index} size={5} />
         <span style={{
           position: 'absolute',
-          top: '-4px',
-          right: '-4px',
-          fontSize: '9px',
+          top: '-6px',
+          right: '-6px',
+          fontSize: '10px',
           background: isActive ? '#4fc3f7' : '#546e7a',
           color: '#fff',
-          padding: '1px 4px',
+          padding: '1px 5px',
           borderRadius: '8px',
           fontWeight: 'bold',
+          lineHeight: '14px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
         }}>
           {index + 1}
         </span>
+        {contentInfo.isEmpty && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            fontSize: '9px',
+            color: '#78909c',
+            background: 'rgba(0,0,0,0.5)',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+          }}>
+            空
+          </div>
+        )}
       </div>
 
-      <div style={{ marginTop: '4px', width: '100%' }}>
+      {contentInfo.dominantColors.length > 0 && (
+        <div style={{
+          display: 'flex',
+          gap: '2px',
+          marginTop: '4px',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+        }}>
+          {contentInfo.dominantColors.map((color, i) => (
+            <div
+              key={i}
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '2px',
+                background: color,
+                border: '1px solid rgba(255,255,255,0.2)',
+                boxShadow: '0 0 2px rgba(0,0,0,0.3)',
+              }}
+              title={color}
+            />
+          ))}
+        </div>
+      )}
+
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        marginTop: '3px',
+        width: '100%',
+        justifyContent: 'center',
+      }}>
+        <div style={{
+          height: '3px',
+          flex: 1,
+          maxWidth: '40px',
+          background: '#1a2328',
+          borderRadius: '2px',
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            height: '100%',
+            width: `${fillPercent}%`,
+            background: isActive ? '#4fc3f7' : fillPercent > 0 ? '#66bb6a' : 'transparent',
+            borderRadius: '2px',
+            transition: 'width 0.2s',
+          }} />
+        </div>
+        <span style={{
+          fontSize: '9px',
+          color: isActive ? '#4fc3f7' : '#607d8b',
+          whiteSpace: 'nowrap',
+          minWidth: '24px',
+          textAlign: 'right',
+        }}>
+          {fillPercent}%
+        </span>
+      </div>
+
+      <div style={{ marginTop: '2px', width: '100%' }}>
+        {isEditingName ? (
+          <input
+            ref={nameInputRef}
+            type="text"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            onBlur={handleNameSubmit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleNameSubmit();
+              if (e.key === 'Escape') { setIsEditingName(false); setNameInput(frame.name); }
+            }}
+            onClick={(e) => e.stopPropagation()}
+            maxLength={12}
+            style={{
+              width: '100%',
+              fontSize: '10px',
+              background: '#1a2328',
+              color: '#4fc3f7',
+              border: '1px solid #4fc3f7',
+              borderRadius: '3px',
+              padding: '2px 4px',
+              textAlign: 'center',
+              boxSizing: 'border-box',
+            }}
+          />
+        ) : (
+          <div
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setIsEditingName(true);
+              setNameInput(frame.name);
+            }}
+            style={{
+              fontSize: '10px',
+              color: isActive ? '#e0e0e0' : '#90a4ae',
+              textAlign: 'center',
+              cursor: 'text',
+              padding: '1px 2px',
+              borderRadius: '3px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              fontWeight: isActive ? 600 : 400,
+            }}
+            title="双击编辑帧名称"
+          >
+            {frame.name}
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: '1px', width: '100%' }}>
         {isEditingDuration ? (
           <input
-            ref={inputRef}
+            ref={durationInputRef}
             type="number"
             value={durationInput}
             onChange={(e) => setDurationInput(e.target.value)}
@@ -164,17 +388,18 @@ const TimelineFrame: React.FC<{
               borderRadius: '3px',
               padding: '2px 4px',
               textAlign: 'center',
+              boxSizing: 'border-box',
             }}
           />
         ) : (
           <div
             onClick={(e) => { e.stopPropagation(); setIsEditingDuration(true); setDurationInput(frame.duration.toString()); }}
             style={{
-              fontSize: '10px',
-              color: isActive ? '#4fc3f7' : '#90a4ae',
+              fontSize: '9px',
+              color: isActive ? '#4fc3f7' : '#607d8b',
               textAlign: 'center',
               cursor: 'pointer',
-              padding: '2px 4px',
+              padding: '1px 4px',
               borderRadius: '3px',
               background: isActive ? 'rgba(79, 195, 247, 0.1)' : 'transparent',
             }}
@@ -185,8 +410,24 @@ const TimelineFrame: React.FC<{
         )}
       </div>
 
-      {frames.length > 1 && (
-        <div style={{ position: 'absolute', top: '2px', left: '2px', display: 'flex', gap: '2px' }}>
+      <div style={{
+        fontSize: '8px',
+        color: '#546e7a',
+        textAlign: 'center',
+        marginTop: '1px',
+      }}>
+        {contentInfo.layerCount} 图层
+      </div>
+
+      {(isHovered || isActive) && frames.length > 1 && (
+        <div style={{
+          position: 'absolute',
+          top: '2px',
+          left: '2px',
+          display: 'flex',
+          gap: '2px',
+          zIndex: 1,
+        }}>
           <button
             onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
             style={iconButtonStyle}
@@ -228,6 +469,7 @@ export const AnimationPanel: React.FC = () => {
     setOnionSkinOpacity,
     moveFrame,
     setFrameDuration,
+    renameFrame,
   } = useCanvasStore();
 
   const playTimeoutRef = useRef<number | null>(null);
@@ -487,10 +729,10 @@ export const AnimationPanel: React.FC = () => {
         onDragEnd={handleDragEnd}
         style={{
           display: 'flex',
-          gap: '2px',
-          padding: '12px 8px',
+          gap: '4px',
+          padding: '10px 8px',
           overflowX: 'auto',
-          minHeight: '100px',
+          minHeight: '140px',
           alignItems: 'flex-start',
           background: '#1a2328',
         }}
@@ -509,6 +751,7 @@ export const AnimationPanel: React.FC = () => {
             onDrop={handleDrop}
             onClick={() => setCurrentFrame(index)}
             onDurationChange={(duration) => setFrameDuration(index, duration)}
+            onNameChange={(name) => renameFrame(index, name)}
             onDuplicate={() => duplicateFrame(index)}
             onDelete={() => deleteFrame(index)}
           />
@@ -524,7 +767,7 @@ export const AnimationPanel: React.FC = () => {
         justifyContent: 'space-between',
         alignItems: 'center',
       }}>
-        <span>💡 拖动帧调整顺序 | 点击时长数字编辑(50-5000ms)</span>
+        <span>💡 拖动帧调整顺序 | 双击帧名编辑 | 点击时长编辑(50-5000ms)</span>
         <span>当前帧: {frames[currentFrame]?.duration || 0}ms</span>
       </div>
     </div>
@@ -564,5 +807,5 @@ const iconButtonStyle: React.CSSProperties = {
   cursor: 'pointer',
   fontSize: '10px',
   color: '#fff',
-  opacity: 0.8,
+  opacity: 0.9,
 };

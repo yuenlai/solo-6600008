@@ -814,6 +814,30 @@ export const PixelGrid: React.FC = () => {
           />
         </div>
       )}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '8px',
+          left: '8px',
+          background: 'rgba(0, 0, 0, 0.7)',
+          color: '#b0bec5',
+          padding: '4px 10px',
+          borderRadius: '6px',
+          fontSize: '11px',
+          fontFamily: 'monospace',
+          pointerEvents: 'none',
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          userSelect: 'none',
+        }}
+      >
+        <span style={{ color: '#e0e0e0' }}>{canvas.width}×{canvas.height}</span>
+        <span style={{ color: '#546e7a' }}>|</span>
+        <span>{(canvas.width * canvas.height).toLocaleString()} px</span>
+      </div>
       <style>{`
         @keyframes zoomIndicatorFade {
           from {
